@@ -1,0 +1,36 @@
+name: scraper
+version: 1.0.0+1
+publish_to: none
+description: Landline Scraping tool by innovationcodes.
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  file_picker: ^4.3.1
+  flutter:
+    sdk: flutter
+  get: 4.6.1
+  shared_preferences: ^2.0.12
+  intl: ^0.17.0
+  xml: ^5.3.1
+  requests:
+  windows_ocr: ^0.0.1
+  path_provider: ^2.0.8
+  desktop_webview_window: ^0.1.6
+  
+ 
+dependency_overrides: 
+  shared_preferences: ^2.0.12
+  xml: ^5.3.1
+  path_provider: ^2.0.8
+
+  
+dev_dependencies:
+  flutter_lints: ^1.0.0
+  flutter_test:
+    sdk: flutter
+  lints: 1.0.1
+
+flutter:
+  uses-material-design: true
