@@ -13,6 +13,7 @@ import 'package:requests/requests.dart';
 class Scrapper {
   GetHttpClient client = GetHttpClient(
     timeout: Duration(seconds: 30),
+    allowAutoSignedCert: true,
   );
   File xFile;
   String weToken = "", vodafoneToken = '', etisalatCookie = '';
@@ -30,6 +31,7 @@ class Scrapper {
       @required bool allowEtisalat,
       @required bool allowVodafoneSecondStep,
       @required bool allowOrange,
+      @required bool weArdy,
       @required bool allowWe,
       @required String sfid}) async {
     /// open browser for orange
@@ -50,7 +52,9 @@ class Scrapper {
       browserInitialized = true;
     }
 
-    if (allowWe && !await _scraperWe(code, phone)) {
+    if (weArdy && !await _scraperArdy(code, phone)) {
+      return "Reserved in Billing";
+    } else if (allowWe && !await _scraperWe(code, phone)) {
       return "Reserved in WE";
     } else if (allowVodafone &&
         !await _scraperVodafone(
@@ -126,22 +130,40 @@ class Scrapper {
     }
   }
 
-  Future<String> scraperArdy(String code, String phone) async {
-    var res = await client.post(
-      "https://billing.te.eg/api/Account/Inquiry",
-      body: FormData(
-        {
+  Future<bool> _scraperArdy(String code, String phone) async {
+    try {
+      if (weToken.isEmpty) {
+        var res = await Requests.get(
+            "https://api-my.te.eg/api/user/generatetoken?channelId=WEB_APP");
+        weToken = res.json()["body"]["jwt"];
+      }
+      var res = await Requests.post(
+        "https://billing.te.eg/api/Account/Inquiry",
+        headers: {"Jwt": weToken},
+        body: {
           "AreaCode": code.trim(),
           "PhoneNumber": phone.trim(),
           "InquiryBy": "telephone",
         },
-      ),
-    );
-    List unPaid = res.body["Account"]["UnPaidInvoices"];
-    if (unPaid.isEmpty) {
-      return "No unpaid Invoice";
-    } else {
-      return "${unPaid.length} Inovice(s)";
+        verify: false,
+      );
+
+      if (res
+          .content()
+          .contains('This telephone does not exist. Please check the number')) {
+        return true;
+      }
+
+      List unPaid = res.json()["Account"]["UnPaidInvoices"] ?? [];
+      if (unPaid.length >= 2) {
+        return false;
+      } else {
+        return true;
+      }
+    } catch (e) {
+      weToken = "";
+      print("$phone,$code,${e.toString()}");
+      return _scraperArdy(code, phone);
     }
   }
 

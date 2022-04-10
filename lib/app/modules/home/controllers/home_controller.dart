@@ -60,6 +60,7 @@ class HomeController extends GetxController {
           allowOrange: allowOrange,
           allowVodafoneSecondStep: allowVodafoneSecondStep,
           allowWe: allowWe,
+          weArdy: allowArdy,
           sfid: sfid);
       i++;
       progress.value = i / lines.length;
