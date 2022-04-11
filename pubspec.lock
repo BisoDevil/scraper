@@ -420,13 +420,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.3.3"
-  windows_ocr:
-    dependency: "direct main"
-    description:
-      name: windows_ocr
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.0.1"
   xdg_directories:
     dependency: transitive
     description:

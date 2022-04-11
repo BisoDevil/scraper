@@ -15,7 +15,7 @@ dependencies:
   intl: ^0.17.0
   xml: ^5.3.1
   requests:
-  windows_ocr: ^0.0.1
+  # windows_ocr: ^0.0.1
   path_provider: ^2.0.8
   desktop_webview_window: ^0.1.6
   

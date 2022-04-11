@@ -4,7 +4,6 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_webview_window
-  windows_ocr
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)
