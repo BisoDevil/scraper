@@ -105,6 +105,18 @@ class HomeView extends GetView<HomeController> {
                           GetBuilder<HomeController>(
                             builder: (_) {
                               return CheckboxListTile(
+                                value: controller.allowArdy,
+                                title: Text("Billing"),
+                                onChanged: (value) {
+                                  controller.allowArdy = value;
+                                  controller.update();
+                                },
+                              );
+                            },
+                          ),
+                          GetBuilder<HomeController>(
+                            builder: (_) {
+                              return CheckboxListTile(
                                 value: controller.allowWe,
                                 title: Text("We"),
                                 onChanged: (value) {
@@ -157,18 +169,6 @@ class HomeView extends GetView<HomeController> {
                                 title: Text("Orange"),
                                 onChanged: (value) {
                                   controller.allowOrange = value;
-                                  controller.update();
-                                },
-                              );
-                            },
-                          ),
-                          GetBuilder<HomeController>(
-                            builder: (_) {
-                              return CheckboxListTile(
-                                value: controller.allowArdy,
-                                title: Text("Ardy"),
-                                onChanged: (value) {
-                                  controller.allowArdy = value;
                                   controller.update();
                                 },
                               );

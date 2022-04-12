@@ -137,7 +137,10 @@ class Scrapper {
       }
       var res = await Requests.post(
         "https://billing.te.eg/api/Account/Inquiry",
-        headers: {"Jwt": weToken},
+        headers: {
+          "token": weToken,
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        },
         body: {
           "AreaCode": code.trim(),
           "PhoneNumber": phone.trim(),
@@ -152,6 +155,7 @@ class Scrapper {
         return true;
       }
 
+      print(res.content());
       List unPaid = res.json()["Account"]["UnPaidInvoices"] ?? [];
       if (unPaid.length >= 2) {
         return false;
@@ -161,7 +165,7 @@ class Scrapper {
     } catch (e) {
       weToken = "";
       print("$phone,$code,${e.toString()}");
-      return _scraperArdy(code, phone);
+      return true;
     }
   }
 
