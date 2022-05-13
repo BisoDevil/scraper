@@ -23,7 +23,7 @@ class HomeController extends GetxController {
       allowVodafoneSecondStep = true,
       allowArdy = true;
 
-  startWeb() async {
+  void startWeb() async {
     log.value = "";
     progress.value = 0;
     current.value = "";

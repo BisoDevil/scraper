@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:scraper/app/modules/home/controllers/home_controller.dart';
 
 import 'app/routes/app_pages.dart';
 
@@ -15,6 +16,9 @@ Future<void> main() async {
   runApp(
     GetMaterialApp(
       debugShowCheckedModeBanner: false,
+      onInit: () {
+        Get.lazyPut(() => HomeController(), fenix: true);
+      },
       initialRoute: AppPages.INITIAL,
       defaultTransition: Transition.cupertino,
       getPages: AppPages.routes,
