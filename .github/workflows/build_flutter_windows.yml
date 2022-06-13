@@ -1,6 +1,6 @@
 name: flutter build windows
 
-on: push
+on: [push]
 
 jobs:
   build-and-release-windows:

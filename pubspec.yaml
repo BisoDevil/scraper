@@ -17,7 +17,8 @@ dependencies:
   requests:
   # windows_ocr: ^0.0.1
   path_provider: ^2.0.8
-  
+  pool: ^1.4.0
+
   
  
 dependency_overrides: 
