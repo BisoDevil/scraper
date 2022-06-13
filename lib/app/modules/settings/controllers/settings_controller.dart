@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsController extends GetxController {
   String username, password, sid, etisalatUsername, etisalatPassword;
+  int maxPooling;
 
   Future<void> saveSettings() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -11,6 +12,7 @@ class SettingsController extends GetxController {
     await prefs.setString("vodafone_sid", sid);
     await prefs.setString("etisalat_username", etisalatUsername);
     await prefs.setString("etisalat_password", etisalatPassword);
+    await prefs.setInt("max_pooling", maxPooling);
     Get.back();
   }
 
@@ -27,6 +29,7 @@ class SettingsController extends GetxController {
     sid = prefs.getString("vodafone_sid");
     etisalatUsername = prefs.getString("etisalat_username");
     etisalatPassword = prefs.getString("etisalat_password");
+    maxPooling = prefs.getInt("max_pooling") ?? 20;
     update();
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:get/get.dart';
 
@@ -66,9 +67,7 @@ class SettingsView extends GetView<SettingsController> {
                     labelText: "Sid",
                   ),
                 ),
-                SizedBox(
-                  height: 20,
-                ),
+                SizedBox(height: 20),
                 Text(
                   "Etisalat Credintials",
                   style: Get.textTheme.headline6,
@@ -101,9 +100,25 @@ class SettingsView extends GetView<SettingsController> {
                     labelText: "Password",
                   ),
                 ),
-                SizedBox(
-                  height: 20,
+                SizedBox(height: 20),
+                Text("Advanced"),
+                TextFormField(
+                  controller:
+                      TextEditingController(text: controller.maxPooling.toString()),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onSaved: (newValue) {
+                    controller.maxPooling = int.parse(newValue);
+                  },
+                  validator: (value) {
+                    if (value.isEmpty) return "Required";
+                    return null;
+                  },
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Max pooling",
+                  ),
                 ),
+                SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
                     if (_key.currentState.validate()) {
@@ -112,7 +127,7 @@ class SettingsView extends GetView<SettingsController> {
                     }
                   },
                   child: Text("Save"),
-                )
+                ),
               ],
             ),
           ),
