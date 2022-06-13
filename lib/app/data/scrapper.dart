@@ -3,11 +3,20 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get_connect.dart';
 import 'package:intl/intl.dart';
+import 'package:scraper/app/data/billing.dart';
 
 import 'package:xml/xml.dart';
 import 'package:requests/requests.dart';
 
-class Scrapper {
+
+class LandlineProvidersResponse{ 
+  BillingResponse billingResponse;
+  String generalResponse;
+
+  LandlineProvidersResponse(String general, {this.billingResponse});
+
+}
+class LandlineProvidersManager {
   GetHttpClient client = GetHttpClient(
     timeout: Duration(seconds: 30),
     allowAutoSignedCert: true,
@@ -19,42 +28,33 @@ class Scrapper {
 
   String errorMsg = "";
 
-  Future<String> validateNumber(
-      {@required String code,
-      @required String phone,
-      @required String username,
-      @required String password,
-      @required String etisalatUsername,
-      @required String etisalatPassword,
-      @required bool allowVodafone,
-      @required bool allowEtisalat,
-      @required bool allowVodafoneSecondStep,
-      @required bool allowOrange,
-      @required bool weArdy,
-      @required bool allowWe,
-      @required String sfid}) async {
+  Future<LandlineProvidersResponse> validateNumber({
+    @required String code,
+    @required String phone,
+    @required String username,
+    @required String password,
+    @required String etisalatUsername,
+    @required String etisalatPassword,
+    @required bool allowVodafone,
+    @required bool allowEtisalat,
+    @required bool allowVodafoneSecondStep,
+    @required bool allowOrange,
+    @required bool weArdy,
+    @required bool allowWe,
+    @required String sfid,
+  }) async {
     /// open browser for orange
     var dir = Directory(Platform.resolvedExecutable).parent.path;
     xFile = File("$dir/log_${DateFormat.MMMEd().format(DateTime.now())}.txt");
 
-    // if (allowOrange && !browserInitialized) {
-    //   webview = await WebviewWindow.create(
-    //     configuration: CreateConfiguration(
-    //       windowHeight: 5,
-    //       windowWidth: 280,
-    //       titleBarHeight: 1,
-    //     ),
-    //   );
-
-    //   webview.launch("https://dsl.orange.eg/en/myaccount/pay-bill");
-    //   await Future.delayed(Duration(seconds: 15));
-    //   browserInitialized = true;
-    // }
-
+    if(weArdy && !allowEtisalat && !allowOrange && !allowVodafone && !allowVodafoneSecondStep && !allowWe) {
+      final res = await BillingScrapper().scrape(code, phone);
+      return LandlineProvidersResponse(res.status.toString(), billingResponse: res);
+    }
     if (weArdy && !await _scraperArdy(code, phone)) {
-      return "Reserved in Billing";
+      return LandlineProvidersResponse("Reserved in Billing");
     } else if (allowWe && !await _scraperWe(code, phone)) {
-      return "Reserved in WE";
+      return LandlineProvidersResponse("Reserved in WE");
     } else if (allowVodafone &&
         !await _scraperVodafone(
           code: code,
@@ -63,7 +63,7 @@ class Scrapper {
           password: password,
           sfid: sfid,
         )) {
-      return "Reserved in Vodafone";
+      return LandlineProvidersResponse("Reserved in Vodafone");
     } else if (allowVodafoneSecondStep &&
         !await _scraperVodafoneSecondStep(
           code: code,
@@ -72,7 +72,7 @@ class Scrapper {
           password: password,
           sfid: sfid,
         )) {
-      return "Reserved in Vodafone second step";
+      return LandlineProvidersResponse("Reserved in Vodafone second step");
     } else if (allowEtisalat &&
         !await _scraperEtisalat(
           code: code,
@@ -80,15 +80,15 @@ class Scrapper {
           username: etisalatUsername,
           password: etisalatPassword,
         )) {
-      return "Reserved in Etisalat";
+      return LandlineProvidersResponse("Reserved in Etisalat");
     } else if (allowOrange &&
         !await _scraperOrange(
           code: code,
           phone: phone,
         )) {
-      return "Reserved in Orange";
+      return LandlineProvidersResponse("Reserved in Orange");
     } else {
-      return "Will check in other Provider";
+      return LandlineProvidersResponse("Will check in other Provider");
     }
   }
 
