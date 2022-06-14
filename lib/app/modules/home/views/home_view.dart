@@ -47,25 +47,19 @@ class HomeView extends GetView<HomeController> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: GetBuilder<HomeController>(
-                        initState: (_) {},
-                        builder: (_) {
-                          return TextFormField(
-                            expands: true,
-                            maxLines: null,
-                            minLines: null,
-                            controller: TextEditingController(
-                                text: controller.phoneText),
-                            textAlign: TextAlign.start,
-                            textAlignVertical: TextAlignVertical.top,
-                            onChanged: (value) {
-                              controller.phoneText = value;
-                            },
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
+                      flex: 1,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: SingleChildScrollView(
+                          reverse: true,
+                          padding: const EdgeInsets.all(4.0),
+                          child: Obx(
+                            () => Text(
+                              controller.log.value,
+                              textAlign: TextAlign.left,
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
                     ),
                     SizedBox(
@@ -184,42 +178,29 @@ class HomeView extends GetView<HomeController> {
             SizedBox(
               height: 20,
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(
-                    () => LinearProgressIndicator(
-                      minHeight: 10,
-                      value: controller.progress.value,
-                      backgroundColor: Colors.grey[300],
-                      color: Colors.blue,
+            Padding(
+              padding: const EdgeInsets.only(right: 80),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Obx(
+                      () => LinearProgressIndicator(
+                        minHeight: 10,
+                        value: controller.progress.value,
+                        backgroundColor: Colors.grey[300],
+                        color: Colors.blue,
+                      ),
                     ),
                   ),
-                ),
-                Obx(
-                  () => Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(controller.current.value),
-                  ),
-                )
-              ],
-            ),
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: SingleChildScrollView(
-                  reverse: true,
-                  padding: const EdgeInsets.all(4.0),
-                  child: Obx(
-                    () => Text(
-                      controller.log.value,
-                      textAlign: TextAlign.left,
+                  Obx(
+                    () => Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(controller.current.value),
                     ),
-                  ),
-                ),
+                  )
+                ],
               ),
-            ),
+            )
           ],
         ),
       ),

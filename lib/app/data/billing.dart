@@ -62,8 +62,8 @@ class BillingScrapper {
   int id = 1;
 
   static const int gracePeriodDays = 55;
-  Future<BillingResponse> scrape(String code, String phone) {
-    String currentId = (id++).toString();
+  Future<BillingResponse> scrape(String landlineID, String code, String phone) {
+    String currentId = landlineID ?? (id++).toString();
     return _scrape(currentId, code, phone);
   }
 
@@ -91,6 +91,7 @@ class BillingScrapper {
               countryCode: code,
               id: currentId,
               landline: phone,
+              newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
               status: BillingStatus.wrongNumber,
             );
           }
@@ -106,12 +107,22 @@ class BillingScrapper {
             countryCode: code,
             id: currentId,
             landline: phone,
+            newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
             status: BillingStatus.pin,
             comment: resContent);
       }
 
       print(resContent);
       final resJson = res.json();
+      if(resJson["Account"] == null) {
+        return BillingResponse(
+            countryCode: code,
+            id: currentId,
+            landline: phone,
+            newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
+            status: BillingStatus.pin,
+            comment: resContent);
+      }
       List unPaid = resJson["Account"]["UnPaidInvoices"] ?? [];
       if (unPaid.isEmpty) {
         unPaid = resJson["Account"]["Invoices"] ?? [];
@@ -122,7 +133,7 @@ class BillingScrapper {
           countryCode: code,
           landline: phone,
           status: BillingStatus.twoOrMoreBills,
-          newLandlineNumber: newLandline,
+          newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
           extras: resJson,
           customerCategory: resJson["Account"]["Customer"]["CategoryName"],
@@ -136,7 +147,7 @@ class BillingScrapper {
           countryCode: code,
           landline: phone,
           status: BillingStatus.noBills,
-          newLandlineNumber: newLandline,
+          newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
           extras: resJson,
           customerCategory: resJson["Account"]["Customer"]["CategoryName"],
@@ -155,7 +166,7 @@ class BillingScrapper {
             countryCode: code,
             landline: phone,
             status: BillingStatus.billMore55,
-            newLandlineNumber: newLandline,
+            newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
             comment: newLandline.isNotEmpty ? "number has been changed" : "",
             extras: resJson,
             customerCategory: resJson["Account"]["Customer"]["CategoryName"],
@@ -167,7 +178,8 @@ class BillingScrapper {
           countryCode: code,
           landline: phone,
           status: BillingStatus.billLess55,
-          newLandlineNumber: newLandline,
+          // newLandlineNumber: newLandline,
+          newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
           extras: resJson,
           customerCategory: resJson["Account"]["Customer"]["CategoryName"],
@@ -176,10 +188,12 @@ class BillingScrapper {
       }
     } catch (e) {
       weToken = "";
+      print(e.toString());
       return BillingResponse(
         id: currentId,
         countryCode: code,
         landline: phone,
+        newLandlineNumber: phone,
         status: BillingStatus.error,
         errorMessage: "error: " + e.toString(),
       );
