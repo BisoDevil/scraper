@@ -66,13 +66,13 @@ class LandlineProvidersManager {
       WeResponse weResponse;
       if (allowBilling) {
         billingResponse = await BillingScrapper().scrape(llid, code, phone);
-      }
-      if (billingResponse.status == BillingStatus.wrongNumber) {
-        return LandlineProvidersResponse(
-          LandlineProvidersStatus.wrongNumber,
-          billingResponse: billingResponse,
-          generalResponse: "wrong number",
-        );
+        if (billingResponse.status == BillingStatus.wrongNumber) {
+          return LandlineProvidersResponse(
+            LandlineProvidersStatus.wrongNumber,
+            billingResponse: billingResponse,
+            generalResponse: "wrong number",
+          );
+        }
       }
       bool reserved = false;
       String ownerProvider = "";
