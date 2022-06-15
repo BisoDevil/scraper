@@ -68,7 +68,7 @@ class LandlineProvidersManager {
 
       // trials = 1 + trialsOnError
       trials += 1;
-      
+
       //* Billing
       if (allowBilling) {
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
@@ -76,6 +76,7 @@ class LandlineProvidersManager {
           if (billingResponse.status != BillingStatus.error) {
             break;
           }
+          await waitAfterError();
         }
         if (billingResponse.status == BillingStatus.wrongNumber) {
           return LandlineProvidersResponse(
@@ -96,6 +97,7 @@ class LandlineProvidersManager {
           if (weResponse.status != WeStatus.error) {
             break;
           }
+          await waitAfterError();
         }
         reserved = weResponse.status == WeStatus.reserved;
         ownerProvider = "we";
@@ -109,6 +111,7 @@ class LandlineProvidersManager {
           if (orangeResponse.status != OrangeStatus.error) {
             break;
           }
+          await waitAfterError();
         }
         reserved = orangeResponse.status == OrangeStatus.reserved;
         ownerProvider = "orange";
@@ -122,6 +125,7 @@ class LandlineProvidersManager {
           if (etisalatResponse.status != EtisalatStatus.error) {
             break;
           }
+          await waitAfterError();
         }
         reserved = etisalatResponse.status == EtisalatStatus.reserved;
         ownerProvider = "etisalat";
@@ -135,6 +139,7 @@ class LandlineProvidersManager {
           if (vodafoneResponse.status != VodafoneStatus.error) {
             break;
           }
+          await waitAfterError();
         }
         reserved = vodafoneResponse.status == VodafoneStatus.reserved;
         ownerProvider = "vodafone";
@@ -148,6 +153,7 @@ class LandlineProvidersManager {
           if (vodafone2Response.status != Vodafone2Status.error) {
             break;
           }
+          await waitAfterError();
         }
         reserved = vodafone2Response.status == Vodafone2Status.reserved;
         ownerProvider = "vodafone2";
@@ -172,5 +178,9 @@ class LandlineProvidersManager {
         generalResponse: "Error: " + e.toString(),
       );
     }
+  }
+
+  Future<void> waitAfterError() {
+    return Future.delayed(Duration(milliseconds: 500));
   }
 }

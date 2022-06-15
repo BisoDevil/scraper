@@ -61,7 +61,7 @@ class HomeController extends GetxController {
     var lines = ls.convert(phoneText.trim());
     var i = 0;
     // List<LandlineProvidersResponse> responses = [];
-    final pool = Pool(prefs.maxPooling, timeout: Duration(seconds: 100));
+    final pool = Pool(prefs.maxPooling, timeout: Duration(seconds: 500));
     for (var iline = 0; iline < lines.length; iline++) {
       final line = lines[iline];
       final _data = line.split("-");

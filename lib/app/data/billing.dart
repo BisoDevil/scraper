@@ -47,7 +47,7 @@ class BillingResponse {
 class BillingScrapper {
   static final BillingScrapper _instance = BillingScrapper._internal();
 
-  static const defaultTimeOutSeconds = 20;
+  static const defaultTimeOutSeconds = 50;
   factory BillingScrapper() {
     return _instance;
   }

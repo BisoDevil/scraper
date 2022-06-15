@@ -40,10 +40,6 @@ class EtisalatScrapper {
   String username;
   String password;
   bool stopIfInvalidCredentials = true;
-  GetHttpClient client = GetHttpClient(
-    timeout: Duration(seconds: defaultTimeOutSeconds),
-    allowAutoSignedCert: true,
-  );
   int id = 1;
   String etisalatCookie = "";
   String loginErr;
@@ -83,6 +79,20 @@ class EtisalatScrapper {
       }
       var res = await _request(code, phone);
       res.raiseForStatus();
+      if (res.statusCode == 302) {
+        print("AMMAR:: Empty response waiting one second...");
+        // await _updateCookie();
+        return Future.delayed(Duration(seconds: 1), () => _scrape(currentId, code, phone));
+        // return Future.delayed(
+        //     Duration(seconds: 1),
+        //     () => EtisalatResponse(
+        //           status: EtisalatStatus.error,
+        //           id: currentId,
+        //           countryCode: code,
+        //           landline: phone,
+        //           errorMessage: "302 redirected",
+        //         ));
+      }
       var resContent = res.content();
       if (resContent.contains("customerBasicData")) {
         return EtisalatResponse(
@@ -123,12 +133,16 @@ class EtisalatScrapper {
           extras: {'error-cookie': errorCookie},
         );
       }
+      print("AMMAR:: Empty response");
+      print(resContent);
+      print(res.statusCode);
       return EtisalatResponse(
         countryCode: code,
         id: currentId,
         landline: phone,
         comment: "Empty. please check manually !",
         status: EtisalatStatus.notReserved,
+        errorMessage: resContent,
       );
     } catch (e) {
       print(e.toString());
