@@ -75,7 +75,7 @@ class OrangeScrapper {
         countryCode: code,
         id: currentId,
         landline: phone,
-        comment: (isNoBill ^ hasBill) ? "" : "Not sure !",
+        comment: (isNoBill ^ hasBill) ? "" : "Check manually !",
         extras: {"hasBill": hasBill, "isNoBill": isNoBill},
         status: OrangeStatus.reserved,
       );

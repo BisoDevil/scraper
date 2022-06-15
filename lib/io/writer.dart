@@ -30,6 +30,7 @@ class Writer {
       "error message",
       "LastBillAmount",
       "CustomerCategory",
+      "billExistenceDays",
       "DEPOSIT",
       "CC",
       "LL",
@@ -43,6 +44,10 @@ class Writer {
       oldContent = xfile.readAsStringSync() + "\n";
     }
     for (var billResponse in billingResponses) {
+      var billExistenceDays = "";
+      if(billResponse.extras?.containsKey("billExistenceDays") ?? false) {
+        billExistenceDays = billResponse.extras['billExistenceDays'];
+      }
       var values = [
         billResponse.id,
         billResponse.countryCode,
@@ -52,6 +57,7 @@ class Writer {
         (billResponse.errorMessage ?? " ").toString(),
         (billResponse.lastBillAmount ?? " ").toString(),
         (billResponse.customerCategory ?? " ").toString(),
+        billExistenceDays,
         (billResponse.deposit ?? " ").toString(),
         (billResponse.countryCode ?? " ").toString(),
         (billResponse.newLandlineNumber ?? " ").toString(),
@@ -86,6 +92,12 @@ class Writer {
       "vodafone",
       "vodafone2",
       "etisalat",
+
+      "orange error",
+      "we error",
+      "vodafone error",
+      "vodafone2 error",
+      "etisalat error",
     ];
     String oldContent = "";
     if (!xfile.existsSync()) {
@@ -132,6 +144,11 @@ class Writer {
         response.vodafoneResponse?.status?.name ?? "null",
         response.vodafone2Response?.status?.name ?? "null",
         response.etisalatResponse?.status?.name ?? "null",
+        response.orangeResponse?.errorMessage ?? "",
+        response.weResponse?.errorMessage ?? "",
+        response.vodafoneResponse?.errorMessage ?? "",
+        response.vodafone2Response?.errorMessage ?? "",
+        response.etisalatResponse?.errorMessage ?? "",
       ];
       values = values
           .map((e) => e

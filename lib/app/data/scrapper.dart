@@ -36,12 +36,12 @@ class LandlineProvidersResponse {
 
 class LandlineProvidersManager {
   // File logFile;
-  static final LandlineProvidersManager _instance = LandlineProvidersManager._internal();
+  static final LandlineProvidersManager _instance =
+      LandlineProvidersManager._internal();
   factory LandlineProvidersManager() {
     return _instance;
   }
   LandlineProvidersManager._internal();
-
 
   Future<LandlineProvidersResponse> validateNumber({
     @required String llid,
@@ -53,6 +53,7 @@ class LandlineProvidersManager {
     @required bool allowOrange,
     @required bool allowBilling,
     @required bool allowWe,
+    int trials = 1,
     bool useConcurrency = false,
   }) async {
     try {
@@ -64,8 +65,15 @@ class LandlineProvidersManager {
       EtisalatResponse etisalatResponse;
       OrangeResponse orangeResponse;
       WeResponse weResponse;
+
+      //* Billing
       if (allowBilling) {
-        billingResponse = await BillingScrapper().scrape(llid, code, phone);
+        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          billingResponse = await BillingScrapper().scrape(llid, code, phone);
+          if (billingResponse.status != BillingStatus.error) {
+            break;
+          }
+        }
         if (billingResponse.status == BillingStatus.wrongNumber) {
           return LandlineProvidersResponse(
             LandlineProvidersStatus.wrongNumber,
@@ -76,26 +84,70 @@ class LandlineProvidersManager {
       }
       bool reserved = false;
       String ownerProvider = "";
-      if (allowEtisalat) {
-        etisalatResponse = await EtisalatScrapper().scrape(llid, code, phone);
-        reserved = etisalatResponse.status == EtisalatStatus.reserved;
-        ownerProvider = "etisalat";
-      } else if (!reserved && allowOrange) {
-        orangeResponse = await OrangeScrapper().scrape(llid, code, phone);
-        reserved = orangeResponse.status == OrangeStatus.reserved;
-        ownerProvider = "orange";
-      } else if (!reserved && allowVodafone) {
-        vodafoneResponse = await VodafoneScrapper().scrape(llid, code, phone);
-        reserved = vodafoneResponse.status == VodafoneStatus.reserved;
-        ownerProvider = "vodafone";
-      } else if (!reserved && allowVodafoneSecondStep) {
-        vodafone2Response = await Vodafone2Scrapper().scrape(llid, code, phone);
-        reserved = vodafone2Response.status == Vodafone2Status.reserved;
-        ownerProvider = "vodafone2";
-      } else if (!reserved && allowWe) {
-        weResponse = await WeScrapper().scrape(llid, code, phone);
+
+      //* We
+      if (!reserved && allowWe) {
+        print("SCAPPER:: scrape we");
+        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          weResponse = await WeScrapper().scrape(llid, code, phone);
+          if (weResponse.status != BillingStatus.error) {
+            break;
+          }
+        }
         reserved = weResponse.status == WeStatus.reserved;
         ownerProvider = "we";
+      }
+
+      //* Orange
+      if (!reserved && allowOrange) {
+        print("SCAPPER:: scrape orange");
+        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          orangeResponse = await OrangeScrapper().scrape(llid, code, phone);
+          if (orangeResponse.status != BillingStatus.error) {
+            break;
+          }
+        }
+        reserved = orangeResponse.status == OrangeStatus.reserved;
+        ownerProvider = "orange";
+      }
+
+      //* Etisalat
+      if (!reserved && allowEtisalat) {
+        print("SCAPPER:: scrape etisalat");
+        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          etisalatResponse = await EtisalatScrapper().scrape(llid, code, phone);
+          if (etisalatResponse.status != BillingStatus.error) {
+            break;
+          }
+        }
+        reserved = etisalatResponse.status == EtisalatStatus.reserved;
+        ownerProvider = "etisalat";
+      }
+
+      //* Vodafone
+      if (!reserved && allowVodafone) {
+        print("SCAPPER:: scrape vodafone");
+        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          vodafoneResponse = await VodafoneScrapper().scrape(llid, code, phone);
+          if (vodafoneResponse.status != BillingStatus.error) {
+            break;
+          }
+        }
+        reserved = vodafoneResponse.status == VodafoneStatus.reserved;
+        ownerProvider = "vodafone";
+      }
+      //* Vodafone2
+      if (!reserved && allowVodafoneSecondStep) {
+        print("SCAPPER:: scrape vodafone2");
+        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          vodafone2Response =
+              await Vodafone2Scrapper().scrape(llid, code, phone);
+          if (vodafone2Response.status != BillingStatus.error) {
+            break;
+          }
+        }
+        reserved = vodafone2Response.status == Vodafone2Status.reserved;
+        ownerProvider = "vodafone2";
       }
       return LandlineProvidersResponse(
         reserved
@@ -111,20 +163,11 @@ class LandlineProvidersManager {
         weResponse: weResponse,
       );
     } catch (e) {
+      print("SCRAPPER:: " + e.toString());
       return LandlineProvidersResponse(
         LandlineProvidersStatus.error,
         generalResponse: "Error: " + e.toString(),
       );
     }
   }
-
-  // writeLog(String line) async {
-  //   if (!await logFile.exists()) {
-  //     logFile.createSync();
-  //   }
-
-  //   String content = logFile.readAsStringSync();
-  //   content += "\n$line";
-  //   logFile.writeAsStringSync(content);
-  // }
 }

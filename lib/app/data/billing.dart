@@ -112,7 +112,6 @@ class BillingScrapper {
             comment: resContent);
       }
 
-      print(resContent);
       final resJson = res.json();
       if(resJson["Account"] == null) {
         return BillingResponse(
@@ -159,7 +158,9 @@ class BillingScrapper {
         final dateJson = invoice["BillDateClient"];
         final month = dateJson["Month"],
             year = dateJson["Year"];
-        bool isOverAcceptedDuration = checkInvoiceGracePeriod(year, month);
+        Duration invoiceDuration = getInvoiceDuration(year, month);
+        bool isOverAcceptedDuration = checkInvoiceGracePeriod(invoiceDuration);
+        resJson.update("billExistenceDays", (value) => invoiceDuration.inDays.toString(), ifAbsent: () => invoiceDuration.inDays.toString());
         if (isOverAcceptedDuration) {
           return BillingResponse(
             id: currentId,
@@ -181,7 +182,7 @@ class BillingScrapper {
           // newLandlineNumber: newLandline,
           newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
-          extras: resJson,
+          extras:  resJson,
           customerCategory: resJson["Account"]["Customer"]["CategoryName"],
           deposit: resJson["Account"]["Customer"]["DepositValue"],
         );
@@ -248,10 +249,13 @@ class BillingScrapper {
     return content.split(">")[1].split("<")[0].split("-")[1].trim();
   }
 
-  bool checkInvoiceGracePeriod(int year, int month) {
+  /// get duration that invoice started in till now
+  Duration getInvoiceDuration(int year, int month) {
     final billDate = DateTime.utc(year, month + 1);
     final now = DateTime.now();
-    final duration = now.difference(billDate);
-    return duration > Duration(days: gracePeriodDays);
+    return now.difference(billDate);
   }
+
+  bool checkInvoiceGracePeriod(Duration duration) => duration > Duration(days: gracePeriodDays);
+  
 }

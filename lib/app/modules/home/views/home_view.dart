@@ -97,6 +97,31 @@ class HomeView extends GetView<HomeController> {
                             height: 8,
                           ),
                           GetBuilder<HomeController>(
+                            initState: (_) {},
+                            builder: (_) {
+                              return TextFormField(
+                                readOnly: controller.isRunning.value,
+                                initialValue: controller.singleLandline.value,
+                                onChanged: controller.updateSingleLine,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  suffixIcon: TextButton.icon(
+                                    onPressed: () {
+                                      controller.testSingleLine();
+                                    },
+                                    icon: Icon(Icons.play_arrow_outlined),
+                                    label: Text(
+                                      "test single landline",
+                                      style: Get.textTheme.button.copyWith(
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          GetBuilder<HomeController>(
                             builder: (_) {
                               return CheckboxListTile(
                                 value: controller.allowArdy,

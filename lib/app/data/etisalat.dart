@@ -39,19 +39,29 @@ class EtisalatScrapper {
 
   String username;
   String password;
+  bool stopIfInvalidCredentials = true;
   GetHttpClient client = GetHttpClient(
     timeout: Duration(seconds: defaultTimeOutSeconds),
     allowAutoSignedCert: true,
   );
   int id = 1;
   String etisalatCookie = "";
+  String loginErr;
 
-  void init(String username, String password) {
+  Future<void> init(
+    String username,
+    String password, {
+    bool stopIfInvalidCredentials = true,
+  }) async {
     this.username = username;
     this.password = password;
+    this.stopIfInvalidCredentials = stopIfInvalidCredentials;
+
+    await _updateCookie();
   }
 
-  Future<EtisalatResponse> scrape(String landlineID, String code, String phone) {
+  Future<EtisalatResponse> scrape(
+      String landlineID, String code, String phone) async {
     String currentId = landlineID ?? (id++).toString();
     return _scrape(currentId, code, phone);
   }
@@ -62,7 +72,15 @@ class EtisalatScrapper {
     String phone,
   ) async {
     try {
-      await _updateCookie(code, phone);
+      if (etisalatCookie.isEmpty) {
+        return EtisalatResponse(
+          countryCode: code,
+          id: currentId,
+          landline: phone,
+          errorMessage: "Can't authenticate user. not valid cookie",
+          status: EtisalatStatus.error,
+        );
+      }
       var res = await _request(code, phone);
       res.raiseForStatus();
       var resContent = res.content();
@@ -72,24 +90,45 @@ class EtisalatScrapper {
           id: currentId,
           landline: phone,
           comment: "contains customerBasicData",
-          status: EtisalatStatus.reserved,
+          status: EtisalatStatus.notReserved,
         );
       }
       if (resContent.contains("errorMessage")) {
+        var istart = resContent.lastIndexOf("errorMessage");
+        istart = resContent.indexOf(">", istart); // close the tag label
+        final iend = resContent.indexOf("<", istart);
+        // TODO: use here the codec lib to convert from encoding windows-1256 to utf-8
+        final msg = resContent.substring(istart, iend);
         return EtisalatResponse(
           countryCode: code,
           id: currentId,
           landline: phone,
-          comment: "contains error",
-          status: EtisalatStatus.notReserved,
+          comment: "contains errorMessage ($msg)",
+          status: EtisalatStatus.reserved,
+        );
+      }
+      if (resContent.contains("j_security_check") &&
+          resContent.contains("mdl-login-forget")) {
+        final errorCookie = etisalatCookie;
+        if (stopIfInvalidCredentials) {
+          etisalatCookie = "";
+        }
+        return EtisalatResponse(
+          countryCode: code,
+          id: currentId,
+          landline: phone,
+          comment: "redirected to login page",
+          errorMessage: "Can't authenticate user. not valid cookie",
+          status: EtisalatStatus.reserved,
+          extras: {'error-cookie': errorCookie},
         );
       }
       return EtisalatResponse(
         countryCode: code,
         id: currentId,
         landline: phone,
-        comment: "Empty",
-        status: EtisalatStatus.reserved,
+        comment: "Empty. please check manually !",
+        status: EtisalatStatus.notReserved,
       );
     } catch (e) {
       print(e.toString());
@@ -122,13 +161,15 @@ class EtisalatScrapper {
     );
   }
 
-  Future<void> _updateCookie(String code, String phone) async {
-    if (etisalatCookie.isEmpty) {
-      var r1 = await requests.Requests.post(
-          "https://newextranet.etisalat.com.eg/j_security_check",
-          body: {"j_username": username, "j_password": password},
-          bodyEncoding: requests.RequestBodyEncoding.FormURLEncoded);
-      r1.raiseForStatus();
+  Future<void> _updateCookie() async {
+    var r1 = await requests.Requests.post(
+        "https://newextranet.etisalat.com.eg/j_security_check",
+        body: {"j_username": username, "j_password": password},
+        bodyEncoding: requests.RequestBodyEncoding.FormURLEncoded);
+    if (r1.statusCode == 403 ||
+        r1.content().contains("اسم المستخدم او كلمة السر خطأ")) {
+      etisalatCookie = "";
+    } else {
       etisalatCookie = r1.headers[HttpHeaders.setCookieHeader];
     }
   }
