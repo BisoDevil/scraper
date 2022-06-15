@@ -66,6 +66,9 @@ class LandlineProvidersManager {
       OrangeResponse orangeResponse;
       WeResponse weResponse;
 
+      // trials = 1 + trialsOnError
+      trials += 1;
+      
       //* Billing
       if (allowBilling) {
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
@@ -90,7 +93,7 @@ class LandlineProvidersManager {
         print("SCAPPER:: scrape we");
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
           weResponse = await WeScrapper().scrape(llid, code, phone);
-          if (weResponse.status != BillingStatus.error) {
+          if (weResponse.status != WeStatus.error) {
             break;
           }
         }
@@ -103,7 +106,7 @@ class LandlineProvidersManager {
         print("SCAPPER:: scrape orange");
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
           orangeResponse = await OrangeScrapper().scrape(llid, code, phone);
-          if (orangeResponse.status != BillingStatus.error) {
+          if (orangeResponse.status != OrangeStatus.error) {
             break;
           }
         }
@@ -116,7 +119,7 @@ class LandlineProvidersManager {
         print("SCAPPER:: scrape etisalat");
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
           etisalatResponse = await EtisalatScrapper().scrape(llid, code, phone);
-          if (etisalatResponse.status != BillingStatus.error) {
+          if (etisalatResponse.status != EtisalatStatus.error) {
             break;
           }
         }
@@ -126,10 +129,10 @@ class LandlineProvidersManager {
 
       //* Vodafone
       if (!reserved && allowVodafone) {
-        print("SCAPPER:: scrape vodafone");
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          print("SCAPPER:: scrape vodafone");
           vodafoneResponse = await VodafoneScrapper().scrape(llid, code, phone);
-          if (vodafoneResponse.status != BillingStatus.error) {
+          if (vodafoneResponse.status != VodafoneStatus.error) {
             break;
           }
         }
@@ -138,11 +141,11 @@ class LandlineProvidersManager {
       }
       //* Vodafone2
       if (!reserved && allowVodafoneSecondStep) {
-        print("SCAPPER:: scrape vodafone2");
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          print("SCAPPER:: scrape vodafone2");
           vodafone2Response =
               await Vodafone2Scrapper().scrape(llid, code, phone);
-          if (vodafone2Response.status != BillingStatus.error) {
+          if (vodafone2Response.status != Vodafone2Status.error) {
             break;
           }
         }

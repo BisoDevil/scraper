@@ -16,10 +16,7 @@ import 'package:scraper/utils/preferences.dart';
 import 'package:intl/intl.dart';
 
 class HomeController extends GetxController {
-  static const maxLogCharLength = 4000;
-
-  /// each batchCapacity, we will write result in the excel sheet and make a checkpoint
-  static const batchCapacity = 100;
+  AppPreferences prefs;
   String phoneText = "";
   var singleLandline = "".obs;
   var log = "Logs of last run:".obs;
@@ -53,7 +50,7 @@ class HomeController extends GetxController {
     logFile =
         File("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
     writeLogLine("Start crawling......");
-    AppPreferences prefs = await AppPreferences.getInstance();
+    prefs = await AppPreferences.getInstance();
     await EtisalatScrapper()
         .init(prefs.etisalatUsername, prefs.etisalatPassword);
     VodafoneScrapper().init(
@@ -82,6 +79,7 @@ class HomeController extends GetxController {
           allowVodafoneSecondStep: allowVodafoneSecondStep,
           allowWe: allowWe,
           allowBilling: allowArdy,
+          trials: prefs.numTrialsOnError,
         );
         i++;
         progress.value = i / lines.length;
@@ -95,7 +93,7 @@ class HomeController extends GetxController {
               "Finished...... (Takes ${endTime.difference(startTime).toString()})");
           writeBatch();
           isRunning(false);
-        } else if ((i - 1) % batchCapacity == 0) {
+        } else if ((i - 1) % prefs.batchCapacity == 0) {
           // write each 1000 billingResponses in batches in the excel sheet
           writeBatch();
           refineLog();
@@ -148,6 +146,7 @@ class HomeController extends GetxController {
 
       var ls = LineSplitter();
       var numLines = ls.convert(phoneText.trim()).length;
+      writeLogLine("files read successfully with $numLines numbers");
       current("0/" + numLines.toString());
       progress(0.0);
       update();
@@ -156,9 +155,16 @@ class HomeController extends GetxController {
     }
   }
 
+  @override
+  void onInit() async {
+    // TODO: implement onInit
+    prefs = await AppPreferences.getInstance();
+    super.onInit();
+  }
+
   void refineLog() {
-    if (log.value.length > maxLogCharLength) {
-      log.value = log.value.substring(log.value.length - maxLogCharLength);
+    if (log.value.length > prefs.logMaxCharCount) {
+      log.value = log.value.substring(log.value.length - prefs.logMaxCharCount);
     }
   }
 
