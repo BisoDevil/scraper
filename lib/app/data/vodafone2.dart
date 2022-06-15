@@ -47,10 +47,12 @@ class Vodafone2Scrapper {
   String username;
   String password;
   String sfid;
-  void init(String username, String password, String sfid) {
+  Future<void> init(String username, String password, String sfid) async {
     this.username = username;
     this.password = password;
     this.sfid = sfid;
+
+    await _updateToken();
   }
 
   Future<Vodafone2Response> scrape(
@@ -65,9 +67,14 @@ class Vodafone2Scrapper {
     String phone,
   ) async {
     try {
-      await _updateToken(code, phone);
+      if (vodafoneToken.isEmpty) {
+        throw ("Can't authenticate user. not valid token");
+      }
       var res = await _request(code, phone);
-
+      if (res.statusCode == 401) {
+        vodafoneToken = "";
+        throw ("can't inquire landline due to authentication issues");
+      }
       var document = XmlDocument.parse(res.content());
       String msg = document
           .getElement("ADSLForm")
@@ -105,7 +112,7 @@ class Vodafone2Scrapper {
     return requests.Requests.post(
         "https://extranet.vodafone.com.eg/dealerAdsl/DealerAdsl/sendCustomerDetails",
         headers: {"Authorization": "Bearer $vodafoneToken"},
-        timeoutSeconds: 30,
+        timeoutSeconds: defaultTimeOutSeconds,
         json: {
           "loggedUser": {
             "sfid": "A94004088",
@@ -172,10 +179,7 @@ class Vodafone2Scrapper {
         });
   }
 
-  Future<void> _updateToken(String code, String phone) async {
-    if (vodafoneToken.isNotEmpty) {
-      return;
-    }
+  Future<void> _updateToken() async {
     var res = await requests.Requests.post(
       "https://extranet.vodafone.com.eg/jwt/authenticate",
       headers: {
@@ -188,6 +192,10 @@ class Vodafone2Scrapper {
         "sfid": sfid,
       },
     );
-    vodafoneToken = res.json()["access_token"];
+    if (res.statusCode == 401) {
+      vodafoneToken = "";
+    } else {
+      vodafoneToken = res.json()["access_token"] ?? "";
+    }
   }
 }
