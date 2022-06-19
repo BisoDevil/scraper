@@ -22,106 +22,165 @@ class SettingsView extends GetView<SettingsController> {
             key: _key,
             child: SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                // crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    "Vodafone Credintials",
-                    style: Get.textTheme.headline6,
-                  ),
-                  TextFormField(
-                    controller: TextEditingController(text: _.username),
-                    onSaved: (newValue) {
-                      controller.username = newValue;
-                    },
-                    validator: (value) {
-                      if (value.isEmpty) return "Required";
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      labelText: "Username",
-                    ),
-                  ),
-                  TextFormField(
-                    controller: TextEditingController(text: _.password),
-                    onSaved: (newValue) {
-                      controller.password = newValue;
-                    },
-                    obscureText: true,
-                    validator: (value) {
-                      if (value.isEmpty) return "Required";
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                    ),
-                  ),
-                  TextFormField(
-                    controller: TextEditingController(text: _.sid),
-                    onSaved: (newValue) {
-                      controller.sid = newValue;
-                    },
-                    validator: (value) {
-                      if (value.isEmpty) return "Required";
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      labelText: "Sid",
-                    ),
+                  Text("Vodafone Credintials", style: Get.textTheme.headline6),
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: TextEditingController(text: _.username),
+                          onSaved: (newValue) {
+                            controller.username = newValue;
+                          },
+                          validator: (value) {
+                            if (value.isEmpty) return "Required";
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Username",
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 18),
+                      Expanded(
+                        child: TextFormField(
+                          controller: TextEditingController(text: _.password),
+                          onSaved: (newValue) {
+                            controller.password = newValue;
+                          },
+                          obscureText: true,
+                          validator: (value) {
+                            if (value.isEmpty) return "Required";
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Password",
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 18),
+                      Expanded(
+                        child: TextFormField(
+                          controller: TextEditingController(text: _.sid),
+                          onSaved: (newValue) {
+                            controller.sid = newValue;
+                          },
+                          validator: (value) {
+                            if (value.isEmpty) return "Required";
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Sid",
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 20),
-                  Text(
-                    "Etisalat Credintials",
-                    style: Get.textTheme.headline6,
-                  ),
-                  TextFormField(
-                    controller: TextEditingController(text: _.etisalatUsername),
-                    onSaved: (newValue) {
-                      controller.etisalatUsername = newValue;
-                    },
-                    validator: (value) {
-                      if (value.isEmpty) return "Required";
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      labelText: "Username",
-                    ),
-                  ),
-                  TextFormField(
-                    controller:
-                        TextEditingController(text: controller.etisalatPassword),
-                    obscureText: true,
-                    onSaved: (newValue) {
-                      controller.etisalatPassword = newValue;
-                    },
-                    validator: (value) {
-                      if (value.isEmpty) return "Required";
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                    ),
+                  Text("Etisalat Credintials", style: Get.textTheme.headline6),
+                  SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller:
+                              TextEditingController(text: _.etisalatUsername),
+                          onSaved: (newValue) {
+                            controller.etisalatUsername = newValue;
+                          },
+                          validator: (value) {
+                            if (value.isEmpty) return "Required";
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Username",
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 18),
+                      Expanded(
+                        child: TextFormField(
+                          controller: TextEditingController(
+                              text: controller.etisalatPassword),
+                          obscureText: true,
+                          onSaved: (newValue) {
+                            controller.etisalatPassword = newValue;
+                          },
+                          validator: (value) {
+                            if (value.isEmpty) return "Required";
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Password",
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 20),
-                  Text("Advanced"),
-                  _intField(
-                    initialValue: controller.maxPooling,
-                    labelText: "Max pooling",
-                    onSaved: (v) => controller.maxPooling = v,
+                  Text("Advanced", style: Get.textTheme.headline6),
+                  SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _intField(
+                          initialValue: controller.maxPooling,
+                          labelText: "Max pooling",
+                          onSaved: (v) => controller.maxPooling = v,
+                        ),
+                      ),
+                      SizedBox(width: 18),
+                      Expanded(
+                        child: _intField(
+                          initialValue: controller.logMaxCharCount,
+                          labelText: "Max log char count",
+                          onSaved: (v) => controller.logMaxCharCount = v,
+                        ),
+                      ),
+                    ],
                   ),
-                  _intField(
-                    initialValue: controller.logMaxCharCount,
-                    labelText: "Max log char count",
-                    onSaved: (v) => controller.logMaxCharCount = v,
-                  ),
+                  SizedBox(height: 20),
                   _intField(
                     initialValue: controller.batchCapacity,
                     labelText: "one batch capacity (each batch we write the result to the file)",
                     onSaved: (v) => controller.batchCapacity = v,
                   ),
-                  _intField(
-                    initialValue: controller.numTrialsOnError,
-                    labelText: "Number of trials on error",
-                    onSaved: (v) => controller.numTrialsOnError = v,
+                  SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _intField(
+                          initialValue: controller.numTrialsOnError,
+                          labelText: "Number of trials on error",
+                          onSaved: (v) => controller.numTrialsOnError = v,
+                        ),
+                      ),
+                      SizedBox(width: 18),
+                      Expanded(
+                        child: _intField(
+                          initialValue: controller.minWaitAfterErrorMills,
+                          labelText: "min wait time after error (ms)",
+                          onSaved: (v) => controller.minWaitAfterErrorMills = v,
+                        ),
+                      ),
+                      SizedBox(width: 18),
+                      Expanded(
+                        child: _intField(
+                          initialValue: controller.maxWaitAfterErrorMills,
+                          labelText: "max wait time after error (ms)",
+                          onSaved: (v) => controller.maxWaitAfterErrorMills = v,
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 20),
                   ElevatedButton(
@@ -158,6 +217,7 @@ class SettingsView extends GetView<SettingsController> {
       },
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
+        border: OutlineInputBorder(),
         labelText: labelText,
       ),
     );

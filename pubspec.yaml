@@ -18,6 +18,7 @@ dependencies:
   # windows_ocr: ^0.0.1
   path_provider: ^2.0.8
   pool: ^1.4.0
+  enough_convert: ^1.6.0
 
   
  

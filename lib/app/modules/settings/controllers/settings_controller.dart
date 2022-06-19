@@ -4,6 +4,7 @@ import 'package:scraper/utils/preferences.dart';
 class SettingsController extends GetxController {
   String username, password, sid, etisalatUsername, etisalatPassword;
   int maxPooling, batchCapacity, logMaxCharCount, numTrialsOnError;
+  int minWaitAfterErrorMills, maxWaitAfterErrorMills;
 
   Future<void> saveSettings() async {
     AppPreferences prefs = await AppPreferences.getInstance();
@@ -16,6 +17,8 @@ class SettingsController extends GetxController {
     await prefs.setBatchCapacity(batchCapacity);
     await prefs.setLogMaxCharCount(logMaxCharCount);
     await prefs.setNumTrialsOnError(numTrialsOnError);
+    await prefs.setMinWaitAfterErrorMills(minWaitAfterErrorMills);
+    await prefs.setMaxWaitAfterErrorMills(maxWaitAfterErrorMills);
     Get.back();
   }
 
@@ -36,6 +39,8 @@ class SettingsController extends GetxController {
     batchCapacity = prefs.batchCapacity;
     logMaxCharCount = prefs.logMaxCharCount;
     numTrialsOnError = prefs.numTrialsOnError;
+    minWaitAfterErrorMills = prefs.minWaitAfterErrorMills;
+    maxWaitAfterErrorMills = prefs.maxWaitAfterErrorMills;
     update();
   }
 }

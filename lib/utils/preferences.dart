@@ -12,6 +12,8 @@ static const _kmp = "max_pooling";
 static const _kntoe = "num_trials_on_error";
 static const _kbc = "batch_capacity";
 static const _klmcc = "log_max_char_count";
+static const _kmxwaem = "max_wait_after_error_millis";
+static const _kmnwaem = "min_wait_after_error_millis";
 
   SharedPreferences internalPreferences;
   static Future<AppPreferences> getInstance() async {
@@ -34,6 +36,8 @@ static const _klmcc = "log_max_char_count";
   int get numTrialsOnError => internalPreferences.getInt(_kntoe) ?? 1;
   int get batchCapacity => internalPreferences.getInt(_kbc) ?? 100;
   int get logMaxCharCount => internalPreferences.getInt(_klmcc) ?? 4000;
+  int get maxWaitAfterErrorMills => internalPreferences.getInt(_kmxwaem) ?? 500;
+  int get minWaitAfterErrorMills => internalPreferences.getInt(_kmnwaem) ?? 500;
 
 
   Future<bool> setVodafoneUsername(String v) => internalPreferences.setString(_kvun, v);
@@ -45,4 +49,6 @@ static const _klmcc = "log_max_char_count";
   Future<bool> setNumTrialsOnError(int v) => internalPreferences.setInt(_kntoe, v);
   Future<bool> setBatchCapacity(int v) => internalPreferences.setInt(_kbc, v);
   Future<bool> setLogMaxCharCount(int v) => internalPreferences.setInt(_klmcc, v);
+  Future<bool> setMaxWaitAfterErrorMills(int v) => internalPreferences.setInt(_kmxwaem, v);
+  Future<bool> setMinWaitAfterErrorMills(int v) => internalPreferences.setInt(_kmnwaem, v);
 }

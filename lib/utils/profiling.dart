@@ -1,9 +1,7 @@
-
-import 'dart:collection';
-
 List<DateTime> ticks = [];
 String tick() {
   ticks.add(DateTime.now());
+  return ticks.length.toString();
 }
 
 

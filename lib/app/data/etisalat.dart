@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
-import 'package:get/get_connect.dart';
 import 'package:requests/requests.dart' as requests;
+import 'package:enough_convert/enough_convert.dart';
 
 enum EtisalatStatus { notReserved, reserved, error }
 
@@ -53,7 +53,12 @@ class EtisalatScrapper {
     this.password = password;
     this.stopIfInvalidCredentials = stopIfInvalidCredentials;
 
-    await _updateCookie();
+    try {
+      await _updateCookie();
+    } catch (e) {
+      print("error in init etisalat ${e.toString()}");
+      throw("Can't initialize etisalat scrapper, error: ${e.toString()}");
+    }
   }
 
   Future<EtisalatResponse> scrape(
@@ -93,7 +98,7 @@ class EtisalatScrapper {
         //           errorMessage: "302 redirected",
         //         ));
       }
-      var resContent = res.content();
+      var resContent = Windows1256Codec(allowInvalid: true).decode(res.bytes());
       if (resContent.contains("customerBasicData")) {
         return EtisalatResponse(
           countryCode: code,
@@ -107,8 +112,8 @@ class EtisalatScrapper {
         var istart = resContent.lastIndexOf("errorMessage");
         istart = resContent.indexOf(">", istart); // close the tag label
         final iend = resContent.indexOf("<", istart);
-        // TODO: use here the codec lib to convert from encoding windows-1256 to utf-8
         final msg = resContent.substring(istart, iend);
+        print("AMMAR::: $msg");
         return EtisalatResponse(
           countryCode: code,
           id: currentId,
@@ -129,7 +134,7 @@ class EtisalatScrapper {
           landline: phone,
           comment: "redirected to login page",
           errorMessage: "Can't authenticate user. not valid cookie",
-          status: EtisalatStatus.reserved,
+          status: EtisalatStatus.error,
           extras: {'error-cookie': errorCookie},
         );
       }
@@ -177,9 +182,11 @@ class EtisalatScrapper {
 
   Future<void> _updateCookie() async {
     var r1 = await requests.Requests.post(
-        "https://newextranet.etisalat.com.eg/j_security_check",
-        body: {"j_username": username, "j_password": password},
-        bodyEncoding: requests.RequestBodyEncoding.FormURLEncoded);
+      "https://newextranet.etisalat.com.eg/j_security_check",
+      body: {"j_username": username, "j_password": password},
+      bodyEncoding: requests.RequestBodyEncoding.FormURLEncoded,
+      timeoutSeconds: defaultTimeOutSeconds,
+    );
     if (r1.statusCode == 403 ||
         r1.content().contains("اسم المستخدم او كلمة السر خطأ")) {
       etisalatCookie = "";

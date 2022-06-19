@@ -9,7 +9,6 @@ import 'package:scraper/app/data/etisalat.dart';
 import 'package:scraper/app/data/scrapper.dart';
 import 'package:pool/pool.dart';
 import 'package:scraper/app/data/vodafone.dart';
-import 'package:scraper/app/data/vodafone2.dart';
 import 'package:scraper/io/writer.dart';
 import 'package:scraper/utils/preferences.dart';
 
@@ -27,7 +26,6 @@ class HomeController extends GetxController {
       allowWe = false,
       allowOrange = false,
       allowEtisalat = false,
-      allowVodafoneSecondStep = false,
       allowArdy = false;
   final isRunning = false.obs;
 
@@ -37,68 +35,79 @@ class HomeController extends GetxController {
   String billingCSVPath;
   String generalCSVPath;
   void startWeb() async {
-    isRunning(true);
-    log.value = "";
-    progress.value = 0;
-    current.value = "";
-    startTime = DateTime.now();
-    var dir = Directory(Platform.resolvedExecutable).parent.path;
-    billingCSVPath =
-        "$dir/billing_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
-    generalCSVPath =
-        "$dir/general_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
-    logFile =
-        File("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
-    writeLogLine("Start crawling......");
-    prefs = await AppPreferences.getInstance();
-    await EtisalatScrapper()
-        .init(prefs.etisalatUsername, prefs.etisalatPassword);
-    VodafoneScrapper().init(
-        prefs.vodafoneUsername, prefs.vodafonePassword, prefs.vodafoneSID);
-    Vodafone2Scrapper().init(
-        prefs.vodafoneUsername, prefs.vodafonePassword, prefs.vodafoneSID);
-    var ls = LineSplitter();
-    var lines = ls.convert(phoneText.trim());
-    var i = 0;
-    // List<LandlineProvidersResponse> responses = [];
-    final pool = Pool(prefs.maxPooling, timeout: Duration(seconds: 500));
-    for (var iline = 0; iline < lines.length; iline++) {
-      final line = lines[iline];
-      final _data = line.split("-");
-      final code = _data.first;
-      final phone = _data[1];
-      final id = (iline + 1).toString();
-      pool.withResource(() async {
-        final response = await LandlineProvidersManager().validateNumber(
-          llid: id,
-          code: code.startsWith("0") ? code : "0$code",
-          phone: phone,
-          allowEtisalat: allowEtisalat,
-          allowVodafone: allowVodafone,
-          allowOrange: allowOrange,
-          allowVodafoneSecondStep: allowVodafoneSecondStep,
-          allowWe: allowWe,
-          allowBilling: allowArdy,
-          trials: prefs.numTrialsOnError,
-        );
-        i++;
-        progress.value = i / lines.length;
-        current.value = "$i/${lines.length}";
-        writeLogLine(
-            "[!] 0$line is ${response.status.name} (${response.generalResponse})");
-        responses.add(response);
-        if (i == lines.length) {
-          endTime = DateTime.now();
+    try {
+      isRunning(true);
+      log.value = "";
+      progress.value = 0;
+      current.value = "";
+      startTime = DateTime.now();
+      var dir = Directory(Platform.resolvedExecutable).parent.path;
+      billingCSVPath =
+          "$dir/billing_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
+      generalCSVPath =
+          "$dir/general_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
+      logFile = File("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
+      if(!logFile.existsSync()) {
+        logFile.createSync();
+      }
+      writeLogLine("Start crawling......");
+      prefs = await AppPreferences.getInstance();
+      if (allowEtisalat) {
+        await EtisalatScrapper()
+            .init(prefs.etisalatUsername, prefs.etisalatPassword);
+      }
+      if (allowVodafone) {
+        await VodafoneScrapper().init(
+            prefs.vodafoneUsername, prefs.vodafonePassword, prefs.vodafoneSID);
+      }
+      var ls = LineSplitter();
+      var lines = ls.convert(phoneText.trim());
+      var i = 0;
+      // List<LandlineProvidersResponse> responses = [];
+      final pool = Pool(prefs.maxPooling, timeout: Duration(days: 2));
+      for (var iline = 0; iline < lines.length; iline++) {
+        final line = lines[iline];
+        final _data = line.split("-");
+        final code = _data.first;
+        final phone = _data[1];
+        final id = (iline + 1).toString();
+        pool.withResource(() async {
+          final response = await LandlineProvidersManager().validateNumber(
+            llid: id,
+            code: code.startsWith("0") ? code : "0$code",
+            phone: phone,
+            allowEtisalat: allowEtisalat,
+            allowVodafone: allowVodafone,
+            allowOrange: allowOrange,
+            allowWe: allowWe,
+            allowBilling: allowArdy,
+            trials: prefs.numTrialsOnError,
+            waitAfterErrorMaxMillis: prefs.maxWaitAfterErrorMills,
+            waitAfterErrorMinMillis: prefs.minWaitAfterErrorMills,
+            writeLog: writeLogLine,
+          );
+          i++;
+          progress.value = i / lines.length;
+          current.value = "$i/${lines.length}";
           writeLogLine(
-              "Finished...... (Takes ${endTime.difference(startTime).toString()})");
-          writeBatch();
-          isRunning(false);
-        } else if ((i - 1) % prefs.batchCapacity == 0) {
-          // write each 1000 billingResponses in batches in the excel sheet
-          writeBatch();
-          refineLog();
-        }
-      });
+              "[!] 0$line is ${response.status.name} (${response.generalResponse})");
+          responses.add(response);
+          if (i >= lines.length) {
+            endTime = DateTime.now();
+            writeLogLine(
+                "Finished...... (Takes ${endTime.difference(startTime).toString()})");
+            writeBatch();
+            isRunning(false);
+          } else if ((i - 1) % prefs.batchCapacity == 0) {
+            // write each 1000 billingResponses in batches in the excel sheet
+            writeBatch();
+            refineLog();
+          }
+        });
+      }
+    } catch (e) {
+      print("Error in starting crawling: ${e.toString()}");
+      writeLogLine("error in starting crawling. ${e.toString()}");
     }
   }
 
@@ -111,13 +120,8 @@ class HomeController extends GetxController {
         shouldContinue: true,
       );
     }
-    if ([
-      allowEtisalat,
-      allowOrange,
-      allowVodafone,
-      allowVodafoneSecondStep,
-      allowWe
-    ].any((element) => element)) {
+    if ([allowEtisalat, allowOrange, allowVodafone, allowWe]
+        .any((element) => element)) {
       // write responses of providers
       Writer().writeGeneralExcelSheet(responses,
           path: generalCSVPath, shouldContinue: true);
@@ -128,7 +132,8 @@ class HomeController extends GetxController {
   writeLogLine(String line) {
     print("AMMAR:: write log line: " + line);
     log(log.value + "\n$line");
-    // logFile.writeAsStringSync(logFile.readAsStringSync() + "\n$line");
+    // TODO: take care of thread-safe
+    logFile?.writeAsStringSync("\n$line", mode: FileMode.append);
   }
 
   Future<void> pickFile() async {

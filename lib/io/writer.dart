@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:enough_convert/enough_convert.dart';
 import 'package:scraper/app/data/billing.dart';
 import 'package:scraper/app/data/scrapper.dart';
 import 'package:scraper/utils/paths.dart';
@@ -45,7 +46,7 @@ class Writer {
     }
     for (var billResponse in billingResponses) {
       var billExistenceDays = "";
-      if(billResponse.extras?.containsKey("billExistenceDays") ?? false) {
+      if (billResponse.extras?.containsKey("billExistenceDays") ?? false) {
         billExistenceDays = billResponse.extras['billExistenceDays'];
       }
       var values = [
@@ -85,19 +86,17 @@ class Writer {
       "ID",
       "country code",
       "landline",
-      "Status",
       "comment",
-      "orange",
+      "billing",
       "we",
-      "vodafone",
-      "vodafone2",
       "etisalat",
-
-      "orange error",
+      "orange",
+      "vodafone",
       "we error",
-      "vodafone error",
-      "vodafone2 error",
       "etisalat error",
+      "orange error",
+      "vodafone error",
+      "Status",
     ];
     String oldContent = "";
     if (!xfile.existsSync()) {
@@ -113,51 +112,52 @@ class Writer {
           response.etisalatResponse?.id ??
           response.orangeResponse?.id ??
           response.vodafoneResponse?.id ??
-          response.vodafone2Response?.id ??
           response.weResponse?.id;
       final validCode = response.billingResponse?.countryCode ??
           response.etisalatResponse?.countryCode ??
           response.orangeResponse?.countryCode ??
           response.vodafoneResponse?.countryCode ??
-          response.vodafone2Response?.countryCode ??
           response.weResponse?.countryCode;
       final validPhone = response.billingResponse?.landline ??
           response.etisalatResponse?.landline ??
           response.orangeResponse?.landline ??
           response.vodafoneResponse?.landline ??
-          response.vodafone2Response?.landline ??
           response.weResponse?.landline;
       final validComment = (response.billingResponse?.comment ?? "") +
           (response.etisalatResponse?.comment ?? "") +
           (response.orangeResponse?.comment ?? "") +
           (response.vodafoneResponse?.comment ?? "") +
-          (response.vodafone2Response?.comment ?? "") +
           (response.weResponse?.comment ?? "");
       var values = [
         validID,
         validCode,
         validPhone,
-        response.status.name,
         validComment,
-        response.orangeResponse?.status?.name ?? "null",
+        response.billingResponse?.status?.name ?? "null",
         response.weResponse?.status?.name ?? "null",
-        response.vodafoneResponse?.status?.name ?? "null",
-        response.vodafone2Response?.status?.name ?? "null",
         response.etisalatResponse?.status?.name ?? "null",
-        response.orangeResponse?.errorMessage ?? "",
+        response.orangeResponse?.status?.name ?? "null",
+        response.vodafoneResponse?.status?.name ?? "null",
         response.weResponse?.errorMessage ?? "",
-        response.vodafoneResponse?.errorMessage ?? "",
-        response.vodafone2Response?.errorMessage ?? "",
         response.etisalatResponse?.errorMessage ?? "",
+        response.orangeResponse?.errorMessage ?? "",
+        response.vodafoneResponse?.errorMessage ?? "",
+        response.status.name,
       ];
       values = values
-          .map((e) => e
+          .map((e) => (e ?? "")
               .replaceAll(",", ".")
               .replaceAll("\r", ". ")
               .replaceAll("\n", ""))
           .toList();
       lines.add(values.join(","));
     }
-    xfile.writeAsStringSync(oldContent + lines.join("\n"));
+    xfile.writeAsStringSync(
+      oldContent + lines.join("\n"),
+      // lines.join(lines.join("\n")),
+      // mode: FileMode.append,
+      // flush: true,
+      // encoding: Windows1256Codec(),
+    );
   }
 }

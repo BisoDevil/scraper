@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:get/get_connect.dart';
-import 'package:requests/requests.dart' as requests;
 
 enum OrangeStatus { notReserved, reserved, error }
 
@@ -32,20 +29,32 @@ class OrangeScrapper {
   static final OrangeScrapper _instance = OrangeScrapper._internal();
 
   static const defaultTimeOutSeconds = 30;
+  int confidenceTrials = 3;
   factory OrangeScrapper() {
     return _instance;
   }
   OrangeScrapper._internal();
 
-  GetHttpClient client = GetHttpClient(
-    timeout: Duration(seconds: defaultTimeOutSeconds),
-    allowAutoSignedCert: true,
-  );
+  void init({int confidenceTrials = 3}) {
+    this.confidenceTrials = confidenceTrials;
+  }
+
   int id = 1;
 
-  Future<OrangeResponse> scrape(String landlineID, String code, String phone) {
+  Future<OrangeResponse> scrape(
+      String landlineID, String code, String phone) async {
     String currentId = landlineID ?? (id++).toString();
-    return _scrape(currentId, code, phone);
+    var res = await _scrape(currentId, code, phone);
+    var trials = confidenceTrials - 1;
+    while (trials > 0) {
+      if (res.status != OrangeStatus.notReserved) {
+        break;
+      }
+      print("orange - make confidence reamaining $trials");
+      res = await _scrape(currentId, code, phone);
+      trials -= 1;
+    }
+    return res;
   }
 
   Future<OrangeResponse> _scrape(
@@ -56,7 +65,17 @@ class OrangeScrapper {
     try {
       var res = await _request(code, phone);
       var resContent = res.bodyString;
-
+      if (resContent == null) {
+        print("orange - rescontent is null, status code = ${res.statusCode}");
+        return OrangeResponse(
+          status: OrangeStatus.error,
+          id: currentId,
+          countryCode: code,
+          landline: phone,
+          comment: "rescontent is null",
+          errorMessage: "status text = ${res.statusText}. status code = ${res.statusCode}",
+        );
+      }
       // first we should check for new landline number
       if (resContent.contains(
           "The service is temporarily unavailable. Please try again later")) {
@@ -64,12 +83,12 @@ class OrangeScrapper {
           countryCode: code,
           id: currentId,
           landline: phone,
-          comment:
-              "The service is temporarily unavailable. Please try again later",
+          comment: "The service is temporarily unavailable. Please try again later",
           status: OrangeStatus.notReserved,
         );
       }
-      bool isNoBill = resContent.contains("Thank you, no payments are currently due");
+      bool isNoBill =
+          resContent.contains("Thank you, no payments are currently due");
       bool hasBill = resContent.contains("Invoice Due Date");
       return OrangeResponse(
         countryCode: code,
@@ -92,6 +111,10 @@ class OrangeScrapper {
   }
 
   Future<Response> _request(String code, String phone) async {
+    GetHttpClient client = GetHttpClient(
+      timeout: Duration(seconds: defaultTimeOutSeconds),
+      allowAutoSignedCert: true,
+    );
     return client.post('https://dsl.orange.eg/en/myaccount/pay-bill',
         headers: {
           'Accept':

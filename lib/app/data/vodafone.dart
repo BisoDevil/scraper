@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
-import 'package:get/get_connect.dart';
 import 'package:requests/requests.dart' as requests;
-import 'package:xml/xml.dart';
+import 'package:scraper/utils/profiling.dart';
 
 enum VodafoneStatus { notReserved, reserved, error }
 
@@ -38,19 +35,17 @@ class VodafoneScrapper {
   }
   VodafoneScrapper._internal();
 
-  GetHttpClient client = GetHttpClient(
-    timeout: Duration(seconds: defaultTimeOutSeconds),
-    allowAutoSignedCert: true,
-  );
   String vodafoneToken = "";
   int id = 1;
   String username;
   String password;
   String sfid;
-  void init(String username, String password, String sfid) {
+  Future<void> init(String username, String password, String sfid) async {
     this.username = username;
     this.password = password;
     this.sfid = sfid;
+
+    await _updateToken();
   }
 
   Future<VodafoneResponse> scrape(
@@ -65,46 +60,48 @@ class VodafoneScrapper {
     String phone,
   ) async {
     try {
-      await _updateToken(code, phone);
-      var res = await _request(code, phone);
-      if (res.statusCode == 401) {
-        vodafoneToken = "";
+      if (vodafoneToken.isEmpty) {
+        throw ("Can't authenticate user. not valid token");
+      }
+      tick();
+      final currentToken = await _getToken();
+      print(tockStr(title: "getting token take: "));
+      tick();
+      var res = await _request(code, phone, token: currentToken);
+      print(tockStr(title: "vodafone request ${res.statusCode} take: "));
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        print(
+            "token expired or not valid, statusCode = ${res.statusCode} ${res.json()}");
+        // await _updateToken();
         return _scrape(currentId, code, phone);
       }
-      final document = XmlDocument.parse(res.content());
-      String msg = document
-          .getElement("ADSLForm")
-          ?.getElement("error")
-          ?.getElement("errorMessage")
-          ?.innerXml;
-
-      if (msg != null && msg.isNotEmpty) {
-        if (msg.contains("من الممكن توصيل الخدمة علي هذا الخط للرقم")) {
-          return VodafoneResponse(
-            status: VodafoneStatus.notReserved,
-            id: currentId,
-            countryCode: code,
-            comment: msg,
-            landline: phone,
-          );
-        } else {
-          return VodafoneResponse(
-            status: VodafoneStatus.reserved,
-            id: currentId,
-            countryCode: code,
-            landline: phone,
-          );
-        }
-      } else {
+      final errObj = (res.json() ?? {})['error'];
+      if(errObj == null) {
+        throw("errObj not exist in result or result is empty. ${res.statusCode} ${res.content()}");
+      }
+      String msg = errObj['errorMessage'];
+      if (msg == null || msg.isEmpty) {
         return VodafoneResponse(
           status: VodafoneStatus.notReserved,
           id: currentId,
           countryCode: code,
           landline: phone,
         );
+      } else {
+        print(msg);
+        final isErrorMesg = msg.contains("لم تنجح العملية");
+        return VodafoneResponse(
+          // status: isErrorMesg ? VodafoneStatus.error : VodafoneStatus.reserved,
+          status: VodafoneStatus.reserved,
+          id: currentId,
+          countryCode: code,
+          landline: phone,
+          comment: isErrorMesg ? "" : msg,
+          errorMessage: isErrorMesg ? msg : "",
+        );
       }
     } catch (e) {
-      vodafoneToken = "";
+      print("Catch vodafone error: " + e.toString());
       return VodafoneResponse(
         status: VodafoneStatus.error,
         id: currentId,
@@ -115,15 +112,20 @@ class VodafoneScrapper {
     }
   }
 
-  Future<requests.Response> _request(String code, String phone) async {
+  Future<requests.Response> _request(String code, String phone,
+      {String token}) async {
+    final t = token ?? vodafoneToken;
     return requests.Requests.post(
-        "https://extranet.vodafone.com.eg/dealerAdsl/DealerAdsl/validateLandLine",
-        headers: {
-          "Authorization": "Bearer $vodafoneToken",
-          'channel': '1',
-        },
+        "https://extranet.vodafone.com.eg/dealerAdsl/DealerAdsl/sendCustomerDetails",
+        headers: {"Authorization": "Bearer $t", "Accept": "application/json, text/plain, */*", "channel": '1'},
+        timeoutSeconds: defaultTimeOutSeconds,
         json: {
-          "loggedUser": {"sfid": sfid, "username": username},
+          "loggedUser": {
+            "sfid": "A94004088",
+            "username": "ASK",
+          },
+          "username": "TKA",
+          "password": "TKA",
           "areaCodes": [
             {"areaCode": "092", "landlineLength": "7"},
             {"areaCode": "069", "landlineLength": "7"},
@@ -153,16 +155,38 @@ class VodafoneScrapper {
             {"areaCode": "064", "landlineLength": "7"},
             {"areaCode": "062", "landlineLength": "7"}
           ],
-          "selectedArea": code.trim(),
+          "selectedArea": code,
+          "clientFullName": "سيبنىنتىبيس",
+          "landLineOwnerName": "سيبنىنتىبيس",
+          "msisdn": "08981342",
+          "selectedMobilePrefix": "010",
+          "additionalContactNumber": "11111111111",
+          "nationalId": "00000000000000",
+          "address": "asdasd",
+          "dealerName": "أسك",
+          "dealerMobileNumber": "78981520",
+          "selectedDealerMobilePrefix": "010",
+          "captcha":
+              "iVBORw0KGgoAAAANSUhEUgAAAEsAAAAjCAIAAABTi2CKAAAAyUlEQVR42u2XwQ6AMAhD+f+f1sSbh7FSOjWzXGVkL7bA4tg9woQmNKEJTWhCE64hjCvANDC5WpwnjHvQl0DqPE0Y46AJ1wmEJBwxfxZP4MNfEyZ/eKRw3OG4gUOLN7LrlBCxN54m66XJ15KMQT8jxZdPC/yioBYEnm9KtM8TabxJmNy1lAMS8pNJTljNKa14zGohVKnQhKrBCxHmI6Ep2mSyEcVbhGAbqLYK8Cy4D/MqVc3i6bKSH+SeI34Bm9CEJjShCU1owh3iBPAfE2mbfkLKAAAAAElFTkSuQmCC",
+          "captchaValue": "3bfeb",
+          "customerType": "1",
+          "routerPickupOption": false,
+          "hasRouter": false,
+          "mobilePrefixList": ["010", "011", "012"],
+          "dealerSFID": "A94004088",
+          "landLineNumber": "$code$phone",
+          "entityId": "199498",
+          "userId": "72318",
+          "adslSrCreated": false,
+          "cleared": false,
+          "encCap": "592d758e2e0f0b3c4a2c5bd5e2dfef34",
           "fiberLandline": true,
-          "landLineNumber": phone.trim()
+          "userVerified": false
         });
   }
 
-  Future<void> _updateToken(String code, String phone) async {
-    if (vodafoneToken.isNotEmpty) {
-      return;
-    }
+  Future<void> _updateToken() async {
+    print("_update token called");
     var res = await requests.Requests.post(
       "https://extranet.vodafone.com.eg/jwt/authenticate",
       headers: {
@@ -175,6 +199,42 @@ class VodafoneScrapper {
         "sfid": sfid,
       },
     );
-    vodafoneToken = res.json()["access_token"];
+    if (res.statusCode == 401) {
+      print("update token is not authorizd");
+      vodafoneToken = "";
+    } else {
+      vodafoneToken = res.json()["access_token"] ?? "";
+      print("vodafone token: $vodafoneToken");
+      if (vodafoneToken.isEmpty) {
+        print("vodafone token is empty ${res.json()}");
+      }
+    }
+  }
+
+  Future<String> _getToken() async {
+    print("_getToken called");
+    var t = "";
+    var res = await requests.Requests.post(
+      "https://extranet.vodafone.com.eg/jwt/authenticate",
+      headers: {
+        'channel': '1',
+      },
+      timeoutSeconds: 30,
+      json: {
+        "username": username,
+        "password": password,
+        "sfid": sfid,
+      },
+    );
+    if (res.statusCode == 401) {
+      print("get token is not authorizd");
+    } else {
+      t = res.json()["access_token"] ?? "";
+      print("get token vodafone token: $t");
+      if (t.isEmpty) {
+        print("get token vodafone token is empty ${res.json()}");
+      }
+    }
+    return t;
   }
 }

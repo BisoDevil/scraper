@@ -148,30 +148,6 @@ class HomeView extends GetView<HomeController> {
                           GetBuilder<HomeController>(
                             builder: (_) {
                               return CheckboxListTile(
-                                value: controller.allowVodafone,
-                                title: Text("Vodafone"),
-                                onChanged: (value) {
-                                  controller.allowVodafone = value;
-                                  controller.update();
-                                },
-                              );
-                            },
-                          ),
-                          GetBuilder<HomeController>(
-                            builder: (_) {
-                              return CheckboxListTile(
-                                value: controller.allowVodafoneSecondStep,
-                                title: Text("Vodafone Second Step"),
-                                onChanged: (value) {
-                                  controller.allowVodafoneSecondStep = value;
-                                  controller.update();
-                                },
-                              );
-                            },
-                          ),
-                          GetBuilder<HomeController>(
-                            builder: (_) {
-                              return CheckboxListTile(
                                 value: controller.allowEtisalat,
                                 title: Text("Etisalat"),
                                 onChanged: (value) {
@@ -188,6 +164,18 @@ class HomeView extends GetView<HomeController> {
                                 title: Text("Orange"),
                                 onChanged: (value) {
                                   controller.allowOrange = value;
+                                  controller.update();
+                                },
+                              );
+                            },
+                          ),
+                          GetBuilder<HomeController>(
+                            builder: (_) {
+                              return CheckboxListTile(
+                                value: controller.allowVodafone,
+                                title: Text("Vodafone"),
+                                onChanged: (value) {
+                                  controller.allowVodafone = value;
                                   controller.update();
                                 },
                               );
