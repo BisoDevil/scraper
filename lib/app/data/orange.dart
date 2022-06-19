@@ -1,31 +1,37 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get_connect.dart';
+import 'package:scraper/app/data/common.dart';
+import 'package:scraper/io/logger.dart';
 
-enum OrangeStatus { notReserved, reserved, error }
+class OrangeStatus extends GStatus {
+  OrangeStatus(String s) : super(s);
+  OrangeStatus.of(GStatus s): this(s.value);
+}
 
-class OrangeResponse {
-  OrangeStatus status;
-  String id;
-  String countryCode;
-  String landline;
-  String errorMessage = "";
-  String comment = "";
-
-  Map<String, dynamic> extras = {};
-
+class OrangeResponse extends GScrapperResponse<OrangeStatus> {
   OrangeResponse({
-    @required this.status,
-    @required this.id,
-    @required this.countryCode,
-    @required this.landline,
-    this.errorMessage,
-    this.comment,
-    this.extras,
-  });
+    @required OrangeStatus status,
+    @required String id,
+    @required String countryCode,
+    @required String landline,
+    String errorMessage,
+    String comment,
+    Map<String, dynamic> extras,
+  }) : super(
+          countryCode: countryCode,
+          id: id,
+          landline: landline,
+          status: status,
+          comment: comment,
+          errorMessage: errorMessage,
+          extras: extras,
+        );
+  @override
+  String get name => "Orange";
 }
 
 /// Ardy scrapping
-class OrangeScrapper {
+class OrangeScrapper extends GScrapper<OrangeResponse> {
   static final OrangeScrapper _instance = OrangeScrapper._internal();
 
   static const defaultTimeOutSeconds = 30;
@@ -41,16 +47,18 @@ class OrangeScrapper {
 
   int id = 1;
 
+  @override
   Future<OrangeResponse> scrape(
       String landlineID, String code, String phone) async {
     String currentId = landlineID ?? (id++).toString();
     var res = await _scrape(currentId, code, phone);
     var trials = confidenceTrials - 1;
     while (trials > 0) {
-      if (res.status != OrangeStatus.notReserved) {
+      if (res.status != GStatus.notReserved()) {
         break;
       }
       print("orange - make confidence reamaining $trials");
+      RunLogger().newLine(">$landlineID orange - make confidence reamaining $trials");
       res = await _scrape(currentId, code, phone);
       trials -= 1;
     }
@@ -66,14 +74,15 @@ class OrangeScrapper {
       var res = await _request(code, phone);
       var resContent = res.bodyString;
       if (resContent == null) {
-        print("orange - rescontent is null, status code = ${res.statusCode}");
+        RunLogger().newLine(">$currentId orange - rescontent is null, status code = ${res.statusCode}");
         return OrangeResponse(
-          status: OrangeStatus.error,
+          status: OrangeStatus.of(GStatus.error()),
           id: currentId,
           countryCode: code,
           landline: phone,
           comment: "rescontent is null",
-          errorMessage: "status text = ${res.statusText}. status code = ${res.statusCode}",
+          errorMessage:
+              "status text = ${res.statusText}. status code = ${res.statusCode}",
         );
       }
       // first we should check for new landline number
@@ -83,20 +92,22 @@ class OrangeScrapper {
           countryCode: code,
           id: currentId,
           landline: phone,
-          comment: "The service is temporarily unavailable. Please try again later",
-          status: OrangeStatus.notReserved,
+          comment:
+              "The service is temporarily unavailable. Please try again later",
+          status: OrangeStatus.of(GStatus.notReserved()),
         );
       }
       bool isNoBill =
           resContent.contains("Thank you, no payments are currently due");
       bool hasBill = resContent.contains("Invoice Due Date");
+      RunLogger().newLine(">$currentId hasBill=$hasBill, isNoBill=$isNoBill");
       return OrangeResponse(
         countryCode: code,
         id: currentId,
         landline: phone,
         comment: (isNoBill ^ hasBill) ? "" : "Check manually !",
         extras: {"hasBill": hasBill, "isNoBill": isNoBill},
-        status: OrangeStatus.reserved,
+        status: OrangeStatus.of(GStatus.reserved()),
       );
     } catch (e) {
       print(e.toString());
@@ -104,7 +115,7 @@ class OrangeScrapper {
         id: currentId,
         countryCode: code,
         landline: phone,
-        status: OrangeStatus.error,
+        status: OrangeStatus.of(GStatus.error()),
         errorMessage: "error: " + e.toString(),
       );
     }
@@ -170,5 +181,10 @@ class OrangeScrapper {
           'ctl00\$ctl32\$g_3755bda3_055d_40fd_9835_23ecc6ff2207\$ctl00\$btnGetUserBills':
               'Get bills',
         }));
+  }
+
+  @override
+  String toString() {
+    return "Orange";
   }
 }

@@ -1,32 +1,38 @@
 import 'package:flutter/cupertino.dart';
 import 'package:requests/requests.dart' as requests;
-import 'package:scraper/utils/profiling.dart';
+import 'package:scraper/app/data/common.dart';
+import 'package:scraper/io/logger.dart';
 
-enum VodafoneStatus { notReserved, reserved, error }
+class VodafoneStatus extends GStatus {
+  VodafoneStatus(String s) : super(s);
+  VodafoneStatus.of(GStatus s): this(s.value);
+}
 
-class VodafoneResponse {
-  VodafoneStatus status;
-  String id;
-  String countryCode;
-  String landline;
-  String errorMessage = "";
-  String comment = "";
-
-  Map<String, dynamic> extras = {};
-
+class VodafoneResponse extends GScrapperResponse<VodafoneStatus> {
   VodafoneResponse({
-    @required this.status,
-    @required this.id,
-    @required this.countryCode,
-    @required this.landline,
-    this.errorMessage,
-    this.comment,
-    this.extras,
-  });
+    @required VodafoneStatus status,
+    @required String id,
+    @required String countryCode,
+    @required String landline,
+    String errorMessage,
+    String comment,
+    Map<String, dynamic> extras,
+  }) : super(
+          countryCode: countryCode,
+          id: id,
+          landline: landline,
+          status: status,
+          comment: comment,
+          errorMessage: errorMessage,
+          extras: extras,
+        );
+
+  @override
+  String get name => "Vodafone";
 }
 
 /// Ardy scrapping
-class VodafoneScrapper {
+class VodafoneScrapper extends GScrapper<VodafoneResponse> {
   static final VodafoneScrapper _instance = VodafoneScrapper._internal();
 
   static const defaultTimeOutSeconds = 30;
@@ -48,8 +54,12 @@ class VodafoneScrapper {
     await _updateToken();
   }
 
+  @override
   Future<VodafoneResponse> scrape(
-      String landlineID, String code, String phone) {
+    String landlineID,
+    String code,
+    String phone,
+  ) {
     String currentId = landlineID ?? (id++).toString();
     return _scrape(currentId, code, phone);
   }
@@ -63,26 +73,21 @@ class VodafoneScrapper {
       if (vodafoneToken.isEmpty) {
         throw ("Can't authenticate user. not valid token");
       }
-      tick();
-      final currentToken = await _getToken();
-      print(tockStr(title: "getting token take: "));
-      tick();
+      final currentToken = await _getToken(currentId);
       var res = await _request(code, phone, token: currentToken);
-      print(tockStr(title: "vodafone request ${res.statusCode} take: "));
       if (res.statusCode == 401 || res.statusCode == 403) {
-        print(
-            "token expired or not valid, statusCode = ${res.statusCode} ${res.json()}");
+        RunLogger().newLine(">$currentId vodafone - token expired or not valid, scrape again");
         // await _updateToken();
         return _scrape(currentId, code, phone);
       }
       final errObj = (res.json() ?? {})['error'];
-      if(errObj == null) {
-        throw("errObj not exist in result or result is empty. ${res.statusCode} ${res.content()}");
+      if (errObj == null) {
+        throw ("errObj not exist in result or result is empty. ${res.statusCode} ${res.content()}");
       }
       String msg = errObj['errorMessage'];
       if (msg == null || msg.isEmpty) {
         return VodafoneResponse(
-          status: VodafoneStatus.notReserved,
+          status: VodafoneStatus.of(GStatus.notReserved()),
           id: currentId,
           countryCode: code,
           landline: phone,
@@ -91,8 +96,8 @@ class VodafoneScrapper {
         print(msg);
         final isErrorMesg = msg.contains("لم تنجح العملية");
         return VodafoneResponse(
-          // status: isErrorMesg ? VodafoneStatus.error : VodafoneStatus.reserved,
-          status: VodafoneStatus.reserved,
+          // status: isErrorMesg ? GStatus.error() : GStatus.reserved(),
+          status: VodafoneStatus.of(GStatus.reserved()),
           id: currentId,
           countryCode: code,
           landline: phone,
@@ -103,7 +108,7 @@ class VodafoneScrapper {
     } catch (e) {
       print("Catch vodafone error: " + e.toString());
       return VodafoneResponse(
-        status: VodafoneStatus.error,
+        status: VodafoneStatus.of(GStatus.error()),
         id: currentId,
         countryCode: code,
         landline: phone,
@@ -117,7 +122,11 @@ class VodafoneScrapper {
     final t = token ?? vodafoneToken;
     return requests.Requests.post(
         "https://extranet.vodafone.com.eg/dealerAdsl/DealerAdsl/sendCustomerDetails",
-        headers: {"Authorization": "Bearer $t", "Accept": "application/json, text/plain, */*", "channel": '1'},
+        headers: {
+          "Authorization": "Bearer $t",
+          "Accept": "application/json, text/plain, */*",
+          "channel": '1'
+        },
         timeoutSeconds: defaultTimeOutSeconds,
         json: {
           "loggedUser": {
@@ -211,8 +220,9 @@ class VodafoneScrapper {
     }
   }
 
-  Future<String> _getToken() async {
+  Future<String> _getToken(String currentId) async {
     print("_getToken called");
+    RunLogger().newLine(">$currentId get new token for vodafone");
     var t = "";
     var res = await requests.Requests.post(
       "https://extranet.vodafone.com.eg/jwt/authenticate",
@@ -232,9 +242,15 @@ class VodafoneScrapper {
       t = res.json()["access_token"] ?? "";
       print("get token vodafone token: $t");
       if (t.isEmpty) {
+        RunLogger().newLine(">$currentId get token for vodafone returned empty access token ${res.content()}");
         print("get token vodafone token is empty ${res.json()}");
       }
     }
     return t;
+  }
+
+  @override
+  String toString() {
+    return "Vodafone";
   }
 }

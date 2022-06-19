@@ -9,6 +9,7 @@ import 'package:scraper/app/data/etisalat.dart';
 import 'package:scraper/app/data/scrapper.dart';
 import 'package:pool/pool.dart';
 import 'package:scraper/app/data/vodafone.dart';
+import 'package:scraper/io/logger.dart';
 import 'package:scraper/io/writer.dart';
 import 'package:scraper/utils/preferences.dart';
 
@@ -19,7 +20,7 @@ class HomeController extends GetxController {
   String phoneText = "";
   var singleLandline = "".obs;
   var log = "Logs of last run:".obs;
-  File file, logFile;
+  File file;
   var progress = 0.0.obs;
   var current = "".obs;
   bool allowVodafone = false,
@@ -46,10 +47,7 @@ class HomeController extends GetxController {
           "$dir/billing_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
       generalCSVPath =
           "$dir/general_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
-      logFile = File("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
-      if(!logFile.existsSync()) {
-        logFile.createSync();
-      }
+      RunLogger().directTo("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
       writeLogLine("Start crawling......");
       prefs = await AppPreferences.getInstance();
       if (allowEtisalat) {
@@ -133,7 +131,7 @@ class HomeController extends GetxController {
     print("AMMAR:: write log line: " + line);
     log(log.value + "\n$line");
     // TODO: take care of thread-safe
-    logFile?.writeAsStringSync("\n$line", mode: FileMode.append);
+    RunLogger().newLine(line);
   }
 
   Future<void> pickFile() async {

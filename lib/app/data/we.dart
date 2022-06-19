@@ -3,32 +3,38 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get_connect.dart';
 import 'package:requests/requests.dart' as requests;
+import 'package:scraper/app/data/common.dart';
 
-enum WeStatus { notReserved, reserved, error }
+class WeStatus extends GStatus {
+  WeStatus(String s) : super(s);
+  WeStatus.of(GStatus s): this(s.value);
+}
 
-class WeResponse {
-  WeStatus status;
-  String id;
-  String countryCode;
-  String landline;
-  String errorMessage = "";
-  String comment = "";
-
-  Map<String, dynamic> extras = {};
-
+class WeResponse extends GScrapperResponse<WeStatus> {
   WeResponse({
-    @required this.status,
-    @required this.id,
-    @required this.countryCode,
-    @required this.landline,
-    this.errorMessage,
-    this.comment,
-    this.extras,
-  });
+    @required WeStatus status,
+    @required String id,
+    @required String countryCode,
+    @required String landline,
+    String errorMessage,
+    String comment,
+    Map<String, dynamic> extras,
+  }) : super(
+          countryCode: countryCode,
+          id: id,
+          landline: landline,
+          status: status,
+          comment: comment,
+          errorMessage: errorMessage,
+          extras: extras,
+        );
+
+  @override
+  String get name => "We";
 }
 
 /// Ardy scrapping
-class WeScrapper {
+class WeScrapper extends GScrapper<WeResponse> {
   static final WeScrapper _instance = WeScrapper._internal();
 
   static const defaultTimeOutSeconds = 30;
@@ -44,6 +50,7 @@ class WeScrapper {
   String weToken = "";
   int id = 1;
 
+  @override
   Future<WeResponse> scrape(String landlineID, String code, String phone) {
     String currentId = landlineID ?? (id++).toString();
     return _scrape(currentId, code, phone);
@@ -62,32 +69,33 @@ class WeScrapper {
         String msg = body["header"]["responseMessage"];
         if (msg.contains("Subscriber information is not exist")) {
           return WeResponse(
-            status: WeStatus.notReserved,
+            status: WeStatus.of(GStatus.notReserved()),
             id: currentId,
             countryCode: code,
             landline: phone,
+            comment: msg
           );
         } else {
           return WeResponse(
-            status: WeStatus.notReserved,
+            status: WeStatus.of(GStatus.notReserved()),
             id: currentId,
             countryCode: code,
-            comment: "We-Reserved",
             landline: phone,
+            errorMessage: msg, 
           );
         }
       } else {
         return WeResponse(
-          status: WeStatus.reserved,
+          status: WeStatus.of(GStatus.reserved()),
           id: currentId,
           countryCode: code,
           landline: phone,
-          comment: "We-Reserved",
+          comment: body["header"]["responseMessage"],
         );
       }
     } catch (e) {
       return WeResponse(
-        status: WeStatus.error,
+        status: WeStatus.of(GStatus.error()),
         id: currentId,
         countryCode: code,
         landline: phone,
@@ -117,5 +125,10 @@ class WeScrapper {
     var res = await requests.Requests.get(
         "https://api-my.te.eg/api/user/generatetoken?channelId=WEB_APP");
     weToken = res.json()["body"]["jwt"];
+  }
+
+  @override
+  String toString() {
+    return "We";
   }
 }

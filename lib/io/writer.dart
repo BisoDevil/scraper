@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:enough_convert/enough_convert.dart';
 import 'package:scraper/app/data/billing.dart';
 import 'package:scraper/app/data/scrapper.dart';
 import 'package:scraper/utils/paths.dart';
@@ -53,15 +52,15 @@ class Writer {
         billResponse.id,
         billResponse.countryCode,
         billResponse.landline,
-        billResponse.status.toString(),
+        billResponse.status.value,
         (billResponse.comment ?? " ").toString(),
         (billResponse.errorMessage ?? " ").toString(),
         (billResponse.lastBillAmount ?? " ").toString(),
         (billResponse.customerCategory ?? " ").toString(),
         billExistenceDays,
         (billResponse.deposit ?? " ").toString(),
-        (billResponse.countryCode ?? " ").toString(),
-        (billResponse.newLandlineNumber ?? " ").toString(),
+        billResponse.countryCode,
+        billResponse.newLandlineNumber ?? billResponse.landline,
       ];
       values = values
           .map((e) => e
@@ -107,37 +106,21 @@ class Writer {
       oldContent = xfile.readAsStringSync() + "\n";
     }
     for (var response in responses) {
-      // TODO: make base class and extend in all classes
-      final validID = response.billingResponse?.id ??
-          response.etisalatResponse?.id ??
-          response.orangeResponse?.id ??
-          response.vodafoneResponse?.id ??
-          response.weResponse?.id;
-      final validCode = response.billingResponse?.countryCode ??
-          response.etisalatResponse?.countryCode ??
-          response.orangeResponse?.countryCode ??
-          response.vodafoneResponse?.countryCode ??
-          response.weResponse?.countryCode;
-      final validPhone = response.billingResponse?.landline ??
-          response.etisalatResponse?.landline ??
-          response.orangeResponse?.landline ??
-          response.vodafoneResponse?.landline ??
-          response.weResponse?.landline;
-      final validComment = (response.billingResponse?.comment ?? "") +
-          (response.etisalatResponse?.comment ?? "") +
-          (response.orangeResponse?.comment ?? "") +
-          (response.vodafoneResponse?.comment ?? "") +
-          (response.weResponse?.comment ?? "");
+      
+      final validID = response.firstID;
+      final validCode = response.firstCountryCode ?? "";
+      final validPhone = response.firstPhone ?? "";
+      final validComment = response.comment ?? "";
       var values = [
         validID,
         validCode,
         validPhone,
         validComment,
-        response.billingResponse?.status?.name ?? "null",
-        response.weResponse?.status?.name ?? "null",
-        response.etisalatResponse?.status?.name ?? "null",
-        response.orangeResponse?.status?.name ?? "null",
-        response.vodafoneResponse?.status?.name ?? "null",
+        response.billingResponse?.status?.value ?? "null",
+        response.weResponse?.status?.value ?? "null",
+        response.etisalatResponse?.status?.value ?? "null",
+        response.orangeResponse?.status?.value ?? "null",
+        response.vodafoneResponse?.status?.value ?? "null",
         response.weResponse?.errorMessage ?? "",
         response.etisalatResponse?.errorMessage ?? "",
         response.orangeResponse?.errorMessage ?? "",

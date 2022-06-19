@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:scraper/app/data/billing.dart';
+import 'package:scraper/app/data/common.dart';
 import 'package:scraper/app/data/etisalat.dart';
 import 'package:scraper/app/data/orange.dart';
 import 'package:scraper/app/data/vodafone.dart';
@@ -27,6 +28,37 @@ class LandlineProvidersResponse {
     this.orangeResponse,
     this.weResponse,
   });
+
+  List<GScrapperResponse<GStatus>> get responses => [billingResponse, weResponse, etisalatResponse, orangeResponse, vodafoneResponse];
+
+  String get firstID {
+    String res;
+    for (var ele in responses) {
+      res ??= ele?.id;
+    }
+    return res;
+  }
+  String get firstCountryCode {
+    String res;
+    for (var ele in responses) {
+      res ??= ele?.countryCode;
+    }
+    return res;
+  }
+  String get firstPhone {
+    String res;
+    for (var ele in responses) {
+      res ??= ele?.landline;
+    }
+    return res;
+  }
+  String get comment {
+    String res = "";
+    for (var ele in responses) {
+      res += (ele?.comment ?? "").isNotEmpty ? "<${ele.name}: ${ele.comment}> " : "";
+    }
+    return res;
+  }
 }
 
 class LandlineProvidersManager {
@@ -55,105 +87,68 @@ class LandlineProvidersManager {
     void Function(String) writeLog,
   }) async {
     log = writeLog;
+    trials += 1;
     try {
 // var dir = Directory(Platform.resolvedExecutable).parent.path;
       // logFile = File("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
-      BillingResponse billingResponse;
-      VodafoneResponse vodafoneResponse;
-      EtisalatResponse etisalatResponse;
-      OrangeResponse orangeResponse;
-      WeResponse weResponse;
-      // trials = 1 + trialsOnError
-      trials += 1;
+      List<GScrapperResponse<GStatus>> responsesList = [null, null, null, null, null];
+      final allowList = [
+        allowBilling,
+        allowWe,
+        allowEtisalat,
+        allowOrange,
+        allowVodafone
+      ];
+      List<GScrapper> scrappers = [
+        BillingScrapper(),
+        WeScrapper(),
+        EtisalatScrapper(),
+        OrangeScrapper(),
+        VodafoneScrapper()
+      ];
 
-      //* Billing
-      if (allowBilling) {
+      var reserved = false;
+      var ownerProvider = "";
+      for (var i = 0; i < scrappers.length; i++) {
+        if (!allowList[i]) continue;
+        final scrapper = scrappers[i];
+        GScrapperResponse<GStatus> currentResponse;
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
-          log("SCAPPER:: scrape billing $tryIndex");
-          billingResponse = await BillingScrapper().scrape(llid, code, phone);
-          if (billingResponse.status != BillingStatus.error) {
+          log("SCAPPER:: $llid scrape $scrapper $tryIndex");
+          currentResponse = await scrapper.scrape(llid, code, phone);
+          log("SCAPPER:: $llid scrape $scrapper $tryIndex returned with ${currentResponse.status.value}");
+          if (currentResponse.status == BillingStatus.wrongNumber() ||
+              currentResponse.status == BillingStatus.billMore55() ||
+              currentResponse.status == BillingStatus.twoOrMoreBills()) {
+            return LandlineProvidersResponse(
+              LandlineProvidersStatus.excludedNumber,
+              billingResponse: currentResponse,
+              generalResponse: "billing excludes this customer",
+            );
+          }
+          if (currentResponse.status != GStatus.error()) {
             break;
           }
-          await waitAfterError(waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
+          await waitAfterError(
+              waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
         }
-        if (billingResponse.status == BillingStatus.wrongNumber || billingResponse.status == BillingStatus.billMore55 || billingResponse.status == BillingStatus.twoOrMoreBills) {
-          return LandlineProvidersResponse(
-            LandlineProvidersStatus.excludedNumber,
-            billingResponse: billingResponse,
-            generalResponse: "billing excludes this customer",
-          );
-        }
-      }
-      bool reserved = false;
-      String ownerProvider = "";
-
-      //* We
-      if (!reserved && allowWe) {
-        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
-          log("SCAPPER:: scrape we $tryIndex");
-          weResponse = await WeScrapper().scrape(llid, code, phone);
-          if (weResponse.status != WeStatus.error) {
-            break;
-          }
-          await waitAfterError(waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
-        }
-        reserved = weResponse.status == WeStatus.reserved;
-        ownerProvider = "we";
+        reserved = currentResponse.status == GStatus.reserved();
+        ownerProvider = scrapper.toString();
+        responsesList[i] = currentResponse;
+        if(reserved) break;
       }
 
-      //* Etisalat
-      if (!reserved && allowEtisalat) {
-        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
-          log("SCAPPER:: scrape etisalat $tryIndex");
-          etisalatResponse = await EtisalatScrapper().scrape(llid, code, phone);
-          if (etisalatResponse.status != EtisalatStatus.error) {
-            break;
-          }
-          await waitAfterError(waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
-        }
-        reserved = etisalatResponse.status == EtisalatStatus.reserved;
-        ownerProvider = "etisalat";
-      }
-
-      //* Orange
-      if (!reserved && allowOrange) {
-        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
-          log("SCAPPER:: scrape orange $tryIndex");
-          orangeResponse = await OrangeScrapper().scrape(llid, code, phone);
-          if (orangeResponse.status != OrangeStatus.error) {
-            break;
-          }
-          await waitAfterError(waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
-        }
-        reserved = orangeResponse.status == OrangeStatus.reserved;
-        ownerProvider = "orange";
-      }
-
-      //* Vodafone
-      if (!reserved && allowVodafone) {
-        for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
-          log("SCAPPER:: scrape vodafone $tryIndex");
-          vodafoneResponse =
-              await VodafoneScrapper().scrape(llid, code, phone);
-          if (vodafoneResponse.status != VodafoneStatus.error) {
-            break;
-          }
-          await waitAfterError(waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
-        }
-        reserved = vodafoneResponse.status == VodafoneStatus.reserved;
-        ownerProvider = "vodafone";
-      }
       return LandlineProvidersResponse(
         reserved
             ? LandlineProvidersStatus.reserved
             : LandlineProvidersStatus.notReserved,
         generalResponse:
             reserved ? "reserved in " + ownerProvider : "not reserved",
-        billingResponse: billingResponse,
-        etisalatResponse: etisalatResponse,
-        orangeResponse: orangeResponse,
-        vodafoneResponse: vodafoneResponse,
-        weResponse: weResponse,
+        billingResponse: responsesList[0],
+        weResponse: responsesList[1],
+        etisalatResponse: responsesList[2],
+        orangeResponse: responsesList[3],
+        vodafoneResponse: responsesList[4],
       );
     } catch (e) {
       log("SCRAPPER:: " + e.toString());

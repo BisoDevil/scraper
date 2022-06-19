@@ -1,50 +1,73 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
-import 'package:get/get_connect.dart';
 import 'package:requests/requests.dart' as requests;
+import 'package:scraper/app/data/common.dart';
+import 'package:scraper/io/logger.dart';
 
-enum BillingStatus {
-  wrongNumber,
-  noBills,
-  twoOrMoreBills,
-  billLess55,
-  billMore55,
-  pin,
-  error
+class BillingStatus extends GStatus {
+  static const _wrongNumber = "wrongNumber";
+  static const _noBills = "noBills";
+  static const _twoOrMoreBills = "twoOrMoreBills";
+  static const _billLess55 = "billLess55";
+  static const _billMore55 = "billMore55";
+  static const _pin = "pin";
+
+  BillingStatus(String s) : super(s);
+  BillingStatus.of(GStatus s): this(s.value);
+
+  factory BillingStatus.wrongNumber() {
+    return BillingStatus(BillingStatus._wrongNumber);
+  }
+  factory BillingStatus.noBills() {
+    return BillingStatus(BillingStatus._noBills);
+  }
+  factory BillingStatus.twoOrMoreBills() {
+    return BillingStatus(BillingStatus._twoOrMoreBills);
+  }
+  factory BillingStatus.billLess55() {
+    return BillingStatus(BillingStatus._billLess55);
+  }
+  factory BillingStatus.billMore55() {
+    return BillingStatus(BillingStatus._billMore55);
+  }
+  factory BillingStatus.pin() {
+    return BillingStatus(BillingStatus._pin);
+  }
 }
 
-class BillingResponse {
-  BillingStatus status;
-  String id;
-  String countryCode;
-  String landline;
+class BillingResponse extends GScrapperResponse<BillingStatus> {
   String newLandlineNumber = "";
-  String errorMessage = "";
-  String comment = "";
   String customerCategory = "";
   double deposit;
   double lastBillAmount;
 
-  Map<String, dynamic> extras = {};
-
   BillingResponse({
-    @required this.status,
-    @required this.id,
-    @required this.countryCode,
-    @required this.landline,
+    @required BillingStatus status,
+    @required String id,
+    @required String countryCode,
+    @required String landline,
+    String errorMessage,
+    String comment,
+    Map<String, dynamic> extras,
     this.newLandlineNumber,
-    this.errorMessage,
-    this.comment,
-    this.extras,
     this.customerCategory,
     this.deposit,
     this.lastBillAmount,
-  });
+  }) : super(
+          countryCode: countryCode,
+          id: id,
+          landline: landline,
+          status: status,
+          comment: comment,
+          errorMessage: errorMessage,
+          extras: extras,
+        );
+
+  @override
+  String get name => "Billing";
 }
 
 /// Ardy scrapping
-class BillingScrapper {
+class BillingScrapper extends GScrapper<BillingResponse> {
   static final BillingScrapper _instance = BillingScrapper._internal();
 
   static const defaultTimeOutSeconds = 50;
@@ -53,15 +76,12 @@ class BillingScrapper {
   }
   BillingScrapper._internal();
 
-  GetHttpClient client = GetHttpClient(
-    timeout: Duration(seconds: 30),
-    allowAutoSignedCert: true,
-    
-  );
   String weToken = "";
   int id = 1;
 
   static const int gracePeriodDays = 55;
+
+  @override
   Future<BillingResponse> scrape(String landlineID, String code, String phone) {
     String currentId = landlineID ?? (id++).toString();
     return _scrape(currentId, code, phone);
@@ -72,11 +92,12 @@ class BillingScrapper {
     String code,
     String phone,
   ) async {
+    var resContent = "";
     try {
-      await _updateToken(code, phone);
+      await _updateToken(currentId, code, phone);
       var res = await _request(code, phone);
       String newLandline = "";
-      var resContent = res.content();
+      resContent = res.content();
 
       // first we should check for new landline number
       if (resContent.contains('telephone does not exist')) {
@@ -91,11 +112,14 @@ class BillingScrapper {
               countryCode: code,
               id: currentId,
               landline: phone,
-              newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
-              status: BillingStatus.wrongNumber,
+              newLandlineNumber:
+                  (newLandline ?? "").isEmpty ? phone : newLandline,
+              status: BillingStatus.of(GStatus.error()),
             );
           }
           // number changed, request again with this number
+          RunLogger().newLine(
+              ">$currentId number changed, request again with this number");
           res = await _request(code, newLandline);
           resContent = res.content();
         } while (resContent.contains('telephone does not exist'));
@@ -107,19 +131,21 @@ class BillingScrapper {
             countryCode: code,
             id: currentId,
             landline: phone,
-            newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
-            status: BillingStatus.pin,
+            newLandlineNumber:
+                (newLandline ?? "").isEmpty ? phone : newLandline,
+            status: BillingStatus.pin(),
             comment: resContent);
       }
 
       final resJson = res.json();
-      if(resJson["Account"] == null) {
+      if (resJson["Account"] == null) {
         return BillingResponse(
             countryCode: code,
             id: currentId,
             landline: phone,
-            newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
-            status: BillingStatus.pin,
+            newLandlineNumber:
+                (newLandline ?? "").isEmpty ? phone : newLandline,
+            status: BillingStatus.pin(),
             comment: resContent);
       }
       List unPaid = resJson["Account"]["UnPaidInvoices"] ?? [];
@@ -131,7 +157,7 @@ class BillingScrapper {
           id: currentId,
           countryCode: code,
           landline: phone,
-          status: BillingStatus.twoOrMoreBills,
+          status: BillingStatus.twoOrMoreBills(),
           newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
           extras: resJson,
@@ -145,7 +171,7 @@ class BillingScrapper {
           id: currentId,
           countryCode: code,
           landline: phone,
-          status: BillingStatus.noBills,
+          status: BillingStatus.noBills(),
           newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
           extras: resJson,
@@ -156,18 +182,20 @@ class BillingScrapper {
       if (unPaid.length == 1) {
         var invoice = unPaid.first;
         final dateJson = invoice["BillDateClient"];
-        final month = dateJson["Month"],
-            year = dateJson["Year"];
+        final month = dateJson["Month"], year = dateJson["Year"];
         Duration invoiceDuration = getInvoiceDuration(year, month);
         bool isOverAcceptedDuration = checkInvoiceGracePeriod(invoiceDuration);
-        resJson.update("billExistenceDays", (value) => invoiceDuration.inDays.toString(), ifAbsent: () => invoiceDuration.inDays.toString());
+        resJson.update(
+            "billExistenceDays", (value) => invoiceDuration.inDays.toString(),
+            ifAbsent: () => invoiceDuration.inDays.toString());
         if (isOverAcceptedDuration) {
           return BillingResponse(
             id: currentId,
             countryCode: code,
             landline: phone,
-            status: BillingStatus.billMore55,
-            newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
+            status: BillingStatus.billMore55(),
+            newLandlineNumber:
+                (newLandline ?? "").isEmpty ? phone : newLandline,
             comment: newLandline.isNotEmpty ? "number has been changed" : "",
             extras: resJson,
             customerCategory: resJson["Account"]["Customer"]["CategoryName"],
@@ -178,11 +206,11 @@ class BillingScrapper {
           id: currentId,
           countryCode: code,
           landline: phone,
-          status: BillingStatus.billLess55,
+          status: BillingStatus.billLess55(),
           // newLandlineNumber: newLandline,
           newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
-          extras:  resJson,
+          extras: resJson,
           customerCategory: resJson["Account"]["Customer"]["CategoryName"],
           deposit: resJson["Account"]["Customer"]["DepositValue"],
         );
@@ -190,24 +218,28 @@ class BillingScrapper {
     } catch (e) {
       weToken = "";
       print(e.toString());
+      RunLogger().newLine(
+          ">$currentId error: ${e.toString()} while the resContent was $resContent");
       return BillingResponse(
         id: currentId,
         countryCode: code,
         landline: phone,
         newLandlineNumber: phone,
-        status: BillingStatus.error,
+        status: BillingStatus.of(GStatus.error()),
         errorMessage: "error: " + e.toString(),
       );
     }
   }
 
-  Future<void> _updateToken(String code, String phone) async {
+  Future<void> _updateToken(String llid, String code, String phone) async {
     if (weToken.isNotEmpty) {
       return;
     }
+    RunLogger().newLine(">$llid we token is empty, update token");
     var res = await requests.Requests.get(
         "https://api-my.te.eg/api/user/generatetoken?channelId=WEB_APP");
     weToken = res.json()["body"]["jwt"];
+    RunLogger().newLine(">$llid new we token is generated = $weToken");
   }
 
   Future<requests.Response> _request(String code, String phone) async {
@@ -256,6 +288,11 @@ class BillingScrapper {
     return now.difference(billDate);
   }
 
-  bool checkInvoiceGracePeriod(Duration duration) => duration > Duration(days: gracePeriodDays);
-  
+  bool checkInvoiceGracePeriod(Duration duration) =>
+      duration > Duration(days: gracePeriodDays);
+
+  @override
+  String toString() {
+    return "Billing";
+  }
 }

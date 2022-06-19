@@ -3,32 +3,39 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:requests/requests.dart' as requests;
 import 'package:enough_convert/enough_convert.dart';
+import 'package:scraper/app/data/common.dart';
+import 'package:scraper/io/logger.dart';
 
-enum EtisalatStatus { notReserved, reserved, error }
+class EtisalatStatus extends GStatus {
+  EtisalatStatus(String s) : super(s);
+  EtisalatStatus.of(GStatus s): this(s.value);
+}
 
-class EtisalatResponse {
-  EtisalatStatus status;
-  String id;
-  String countryCode;
-  String landline;
-  String errorMessage = "";
-  String comment = "";
-
-  Map<String, dynamic> extras = {};
-
+class EtisalatResponse extends GScrapperResponse<EtisalatStatus> {
   EtisalatResponse({
-    @required this.status,
-    @required this.id,
-    @required this.countryCode,
-    @required this.landline,
-    this.errorMessage,
-    this.comment,
-    this.extras,
-  });
+    @required EtisalatStatus status,
+    @required String id,
+    @required String countryCode,
+    @required String landline,
+    String errorMessage,
+    String comment,
+    Map<String, dynamic> extras,
+  }) : super(
+          countryCode: countryCode,
+          id: id,
+          landline: landline,
+          status: status,
+          comment: comment,
+          errorMessage: errorMessage,
+          extras: extras,
+        );
+
+  @override
+  String get name => "Etisalat";
 }
 
 /// Ardy scrapping
-class EtisalatScrapper {
+class EtisalatScrapper extends GScrapper<EtisalatResponse> {
   static final EtisalatScrapper _instance = EtisalatScrapper._internal();
 
   static const defaultTimeOutSeconds = 30;
@@ -49,6 +56,8 @@ class EtisalatScrapper {
     String password, {
     bool stopIfInvalidCredentials = true,
   }) async {
+    RunLogger().newLine(">INIT initialize etisalt with $username, $password");
+
     this.username = username;
     this.password = password;
     this.stopIfInvalidCredentials = stopIfInvalidCredentials;
@@ -56,11 +65,12 @@ class EtisalatScrapper {
     try {
       await _updateCookie();
     } catch (e) {
-      print("error in init etisalat ${e.toString()}");
-      throw("Can't initialize etisalat scrapper, error: ${e.toString()}");
+      RunLogger().newLine("error in init etisalat ${e.toString()}");
+      throw ("Can't initialize etisalat scrapper, error: ${e.toString()}");
     }
   }
 
+  @override
   Future<EtisalatResponse> scrape(
       String landlineID, String code, String phone) async {
     String currentId = landlineID ?? (id++).toString();
@@ -79,19 +89,21 @@ class EtisalatScrapper {
           id: currentId,
           landline: phone,
           errorMessage: "Can't authenticate user. not valid cookie",
-          status: EtisalatStatus.error,
+          status: EtisalatStatus.of(GStatus.error()),
         );
       }
       var res = await _request(code, phone);
       res.raiseForStatus();
       if (res.statusCode == 302) {
         print("AMMAR:: Empty response waiting one second...");
+        RunLogger().newLine(">$currentId Etisalat returned Empty response 302, waiting one second");
         // await _updateCookie();
-        return Future.delayed(Duration(seconds: 1), () => _scrape(currentId, code, phone));
+        return Future.delayed(
+            Duration(seconds: 1), () => _scrape(currentId, code, phone));
         // return Future.delayed(
         //     Duration(seconds: 1),
         //     () => EtisalatResponse(
-        //           status: EtisalatStatus.error,
+        //           status: EtisalatStatus.of(GStatus.error()),
         //           id: currentId,
         //           countryCode: code,
         //           landline: phone,
@@ -105,7 +117,7 @@ class EtisalatScrapper {
           id: currentId,
           landline: phone,
           comment: "contains customerBasicData",
-          status: EtisalatStatus.notReserved,
+          status: EtisalatStatus.of(GStatus.notReserved()),
         );
       }
       if (resContent.contains("errorMessage")) {
@@ -113,18 +125,18 @@ class EtisalatScrapper {
         istart = resContent.indexOf(">", istart); // close the tag label
         final iend = resContent.indexOf("<", istart);
         final msg = resContent.substring(istart, iend);
-        print("AMMAR::: $msg");
         return EtisalatResponse(
           countryCode: code,
           id: currentId,
           landline: phone,
           comment: "contains errorMessage ($msg)",
-          status: EtisalatStatus.reserved,
+          status: EtisalatStatus.of(GStatus.reserved()),
         );
       }
       if (resContent.contains("j_security_check") &&
           resContent.contains("mdl-login-forget")) {
         final errorCookie = etisalatCookie;
+        RunLogger().newLine(">00 etisalat cookie is not correct $errorCookie");
         if (stopIfInvalidCredentials) {
           etisalatCookie = "";
         }
@@ -134,19 +146,17 @@ class EtisalatScrapper {
           landline: phone,
           comment: "redirected to login page",
           errorMessage: "Can't authenticate user. not valid cookie",
-          status: EtisalatStatus.error,
+          status: EtisalatStatus.of(GStatus.error()),
           extras: {'error-cookie': errorCookie},
         );
       }
-      print("AMMAR:: Empty response");
-      print(resContent);
-      print(res.statusCode);
+      RunLogger().newLine(">00 Etisalat empty response, content $resContent");
       return EtisalatResponse(
         countryCode: code,
         id: currentId,
         landline: phone,
         comment: "Empty. please check manually !",
-        status: EtisalatStatus.notReserved,
+        status: EtisalatStatus.of(GStatus.notReserved()),
         errorMessage: resContent,
       );
     } catch (e) {
@@ -155,7 +165,7 @@ class EtisalatScrapper {
         id: currentId,
         countryCode: code,
         landline: phone,
-        status: EtisalatStatus.error,
+        status: EtisalatStatus.of(GStatus.error()),
         errorMessage: "error: " + e.toString(),
       );
     }
@@ -181,6 +191,7 @@ class EtisalatScrapper {
   }
 
   Future<void> _updateCookie() async {
+    RunLogger().newLine(">00 update etisalat cookie");
     var r1 = await requests.Requests.post(
       "https://newextranet.etisalat.com.eg/j_security_check",
       body: {"j_username": username, "j_password": password},
@@ -193,5 +204,10 @@ class EtisalatScrapper {
     } else {
       etisalatCookie = r1.headers[HttpHeaders.setCookieHeader];
     }
+  }
+
+  @override
+  String toString() {
+    return "Etislat";
   }
 }
