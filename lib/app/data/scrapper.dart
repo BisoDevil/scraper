@@ -119,7 +119,8 @@ class LandlineProvidersManager {
           log("SCAPPER:: $llid scrape $scrapper $tryIndex returned with ${currentResponse.status.value}");
           if (currentResponse.status == BillingStatus.wrongNumber() ||
               currentResponse.status == BillingStatus.billMore55() ||
-              currentResponse.status == BillingStatus.twoOrMoreBills()) {
+              currentResponse.status == BillingStatus.twoOrMoreBills() ||
+              currentResponse.status == BillingStatus.pin()) {
             return LandlineProvidersResponse(
               LandlineProvidersStatus.excludedNumber,
               billingResponse: currentResponse,
