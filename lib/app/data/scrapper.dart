@@ -118,7 +118,7 @@ class LandlineProvidersManager {
           currentResponse = await scrapper.scrape(llid, code, phone);
           log("SCAPPER:: $llid scrape $scrapper $tryIndex returned with ${currentResponse.status.value}");
           if (currentResponse.status == BillingStatus.wrongNumber() ||
-              currentResponse.status == BillingStatus.billMore55() ||
+              currentResponse.status == BillingStatus.billMoreGracePeriod() ||
               currentResponse.status == BillingStatus.twoOrMoreBills() ||
               currentResponse.status == BillingStatus.pin()) {
             return LandlineProvidersResponse(

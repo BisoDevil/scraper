@@ -5,6 +5,7 @@ class SettingsController extends GetxController {
   String username, password, sid, etisalatUsername, etisalatPassword;
   int maxPooling, batchCapacity, logMaxCharCount, numTrialsOnError;
   int minWaitAfterErrorMills, maxWaitAfterErrorMills;
+  int gracePeriodDays;
 
   Future<void> saveSettings() async {
     AppPreferences prefs = await AppPreferences.getInstance();
@@ -19,6 +20,7 @@ class SettingsController extends GetxController {
     await prefs.setNumTrialsOnError(numTrialsOnError);
     await prefs.setMinWaitAfterErrorMills(minWaitAfterErrorMills);
     await prefs.setMaxWaitAfterErrorMills(maxWaitAfterErrorMills);
+    await prefs.setGracePeriodDays(gracePeriodDays);
     Get.back();
   }
 
@@ -41,6 +43,7 @@ class SettingsController extends GetxController {
     numTrialsOnError = prefs.numTrialsOnError;
     minWaitAfterErrorMills = prefs.minWaitAfterErrorMills;
     maxWaitAfterErrorMills = prefs.maxWaitAfterErrorMills;
+    gracePeriodDays = prefs.gracePeriodDays;
     update();
   }
 }

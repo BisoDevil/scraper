@@ -14,6 +14,7 @@ static const _kbc = "batch_capacity";
 static const _klmcc = "log_max_char_count";
 static const _kmxwaem = "max_wait_after_error_millis";
 static const _kmnwaem = "min_wait_after_error_millis";
+static const _kgpd = "grace_period_days";
 
   SharedPreferences internalPreferences;
   static Future<AppPreferences> getInstance() async {
@@ -38,6 +39,7 @@ static const _kmnwaem = "min_wait_after_error_millis";
   int get logMaxCharCount => internalPreferences.getInt(_klmcc) ?? 4000;
   int get maxWaitAfterErrorMills => internalPreferences.getInt(_kmxwaem) ?? 500;
   int get minWaitAfterErrorMills => internalPreferences.getInt(_kmnwaem) ?? 500;
+  int get gracePeriodDays => internalPreferences.getInt(_kgpd) ?? 55;
 
 
   Future<bool> setVodafoneUsername(String v) => internalPreferences.setString(_kvun, v);
@@ -51,4 +53,5 @@ static const _kmnwaem = "min_wait_after_error_millis";
   Future<bool> setLogMaxCharCount(int v) => internalPreferences.setInt(_klmcc, v);
   Future<bool> setMaxWaitAfterErrorMills(int v) => internalPreferences.setInt(_kmxwaem, v);
   Future<bool> setMinWaitAfterErrorMills(int v) => internalPreferences.setInt(_kmnwaem, v);
+  Future<bool> setGracePeriodDays(int v) => internalPreferences.setInt(_kgpd, v);
 }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 
 import 'package:get/get.dart';
+import 'package:scraper/app/data/billing.dart';
 import 'package:scraper/app/data/etisalat.dart';
 
 import 'package:scraper/app/data/scrapper.dart';
@@ -50,6 +51,9 @@ class HomeController extends GetxController {
       RunLogger().directTo("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
       writeLogLine("Start crawling......");
       prefs = await AppPreferences.getInstance();
+      if(allowArdy) {
+        BillingScrapper().init(gracePeriodDays: prefs.gracePeriodDays);
+      }
       if (allowEtisalat) {
         await EtisalatScrapper()
             .init(prefs.etisalatUsername, prefs.etisalatPassword);

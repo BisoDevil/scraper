@@ -127,6 +127,21 @@ class SettingsView extends GetView<SettingsController> {
                     ],
                   ),
                   SizedBox(height: 20),
+                  Text("Billing Settings", style: Get.textTheme.headline6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _intField(
+                          labelText: "Grace Period",
+                          initialValue: controller.gracePeriodDays,
+                          onSaved: (newValue) {
+                            controller.gracePeriodDays = newValue;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 20),
                   Text("Advanced", style: Get.textTheme.headline6),
                   SizedBox(height: 20),
                   Row(

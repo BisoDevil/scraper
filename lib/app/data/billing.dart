@@ -7,8 +7,8 @@ class BillingStatus extends GStatus {
   static const _wrongNumber = "wrongNumber";
   static const _noBills = "noBills";
   static const _twoOrMoreBills = "twoOrMoreBills";
-  static const _billLess55 = "billLess55";
-  static const _billMore55 = "billMore55";
+  static const _billLessGracePeriod = "billLessGracePeriod";
+  static const _billMoreGracePeriod = "billMoreGracePeriod";
   static const _pin = "pin";
 
   BillingStatus(String s) : super(s);
@@ -23,11 +23,11 @@ class BillingStatus extends GStatus {
   factory BillingStatus.twoOrMoreBills() {
     return BillingStatus(BillingStatus._twoOrMoreBills);
   }
-  factory BillingStatus.billLess55() {
-    return BillingStatus(BillingStatus._billLess55);
+  factory BillingStatus.billLessGracePeriod() {
+    return BillingStatus(BillingStatus._billLessGracePeriod);
   }
-  factory BillingStatus.billMore55() {
-    return BillingStatus(BillingStatus._billMore55);
+  factory BillingStatus.billMoreGracePeriod() {
+    return BillingStatus(BillingStatus._billMoreGracePeriod);
   }
   factory BillingStatus.pin() {
     return BillingStatus(BillingStatus._pin);
@@ -79,7 +79,11 @@ class BillingScrapper extends GScrapper<BillingResponse> {
   String weToken = "";
   int id = 1;
 
-  static const int gracePeriodDays = 55;
+  int gracePeriodDays = 55;
+
+  void init({int gracePeriodDays = 55}) {
+    this.gracePeriodDays = gracePeriodDays;
+  }
 
   @override
   Future<BillingResponse> scrape(String landlineID, String code, String phone) {
@@ -193,7 +197,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
             id: currentId,
             countryCode: code,
             landline: phone,
-            status: BillingStatus.billMore55(),
+            status: BillingStatus.billMoreGracePeriod(),
             newLandlineNumber:
                 (newLandline ?? "").isEmpty ? phone : newLandline,
             comment: newLandline.isNotEmpty ? "number has been changed" : "",
@@ -206,7 +210,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
           id: currentId,
           countryCode: code,
           landline: phone,
-          status: BillingStatus.billLess55(),
+          status: BillingStatus.billLessGracePeriod(),
           // newLandlineNumber: newLandline,
           newLandlineNumber: (newLandline ?? "").isEmpty ? phone : newLandline,
           comment: newLandline.isNotEmpty ? "number has been changed" : "",
