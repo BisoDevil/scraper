@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get_connect.dart';
 import 'package:requests/requests.dart' as requests;
 import 'package:scraper/app/data/common.dart';
+import 'package:scraper/io/logger.dart';
 
 class WeStatus extends GStatus {
   WeStatus(String s) : super(s);
@@ -61,9 +62,11 @@ class WeScrapper extends GScrapper<WeResponse> {
     String code,
     String phone,
   ) async {
+    var resContent = "";
     try {
       await _updateToken(code, phone);
       var res = await _request(code, phone);
+      resContent = res.bodyString;
       final body = res.body;
       if (body["body"] == null) {
         String msg = body["header"]["responseMessage"];
@@ -93,7 +96,8 @@ class WeScrapper extends GScrapper<WeResponse> {
           comment: body["header"]["responseMessage"],
         );
       }
-    } catch (e) {
+    } catch (e, s) {
+      RunLogger().newLine(">$currentId #we error: $e while resContent=$resContent with stacktrace $s");
       return WeResponse(
         status: WeStatus.of(GStatus.error()),
         id: currentId,

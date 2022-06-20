@@ -82,6 +82,7 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
     String code,
     String phone,
   ) async {
+    var resContent = "";
     try {
       if (etisalatCookie.isEmpty) {
         return EtisalatResponse(
@@ -110,7 +111,7 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
         //           errorMessage: "302 redirected",
         //         ));
       }
-      var resContent = Windows1256Codec(allowInvalid: true).decode(res.bytes());
+      resContent = Windows1256Codec(allowInvalid: true).decode(res.bytes());
       if (resContent.contains("customerBasicData")) {
         return EtisalatResponse(
           countryCode: code,
@@ -159,8 +160,8 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
         status: EtisalatStatus.of(GStatus.notReserved()),
         errorMessage: resContent,
       );
-    } catch (e) {
-      print(e.toString());
+    } catch (e, s) {
+      RunLogger().newLine(">$currentId #etisalat error: $e while resContent=$resContent with stacktrace $s");
       return EtisalatResponse(
         id: currentId,
         countryCode: code,

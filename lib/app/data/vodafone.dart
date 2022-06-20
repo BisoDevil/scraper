@@ -69,12 +69,14 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
     String code,
     String phone,
   ) async {
+    var resContent = "";
     try {
       if (vodafoneToken.isEmpty) {
         throw ("Can't authenticate user. not valid token");
       }
       final currentToken = await _getToken(currentId);
       var res = await _request(code, phone, token: currentToken);
+      resContent = res.content();
       if (res.statusCode == 401 || res.statusCode == 403) {
         RunLogger().newLine(">$currentId vodafone - token expired or not valid, scrape again");
         // await _updateToken();
@@ -105,8 +107,10 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
           errorMessage: isErrorMesg ? msg : "",
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print("Catch vodafone error: " + e.toString());
+      RunLogger().newLine(">$currentId #vodafone error: $e while resContent=$resContent with stacktrace $s");
+
       return VodafoneResponse(
         status: VodafoneStatus.of(GStatus.error()),
         id: currentId,

@@ -70,9 +70,10 @@ class OrangeScrapper extends GScrapper<OrangeResponse> {
     String code,
     String phone,
   ) async {
+    var resContent = "";
     try {
       var res = await _request(code, phone);
-      var resContent = res.bodyString;
+      resContent = res.bodyString;
       if (resContent == null) {
         RunLogger().newLine(">$currentId orange - rescontent is null, status code = ${res.statusCode}");
         return OrangeResponse(
@@ -109,8 +110,9 @@ class OrangeScrapper extends GScrapper<OrangeResponse> {
         extras: {"hasBill": hasBill, "isNoBill": isNoBill},
         status: OrangeStatus.of(GStatus.reserved()),
       );
-    } catch (e) {
+    } catch (e, s) {
       print(e.toString());
+      RunLogger().newLine(">$currentId #orange error: $e while resContent=$resContent with stacktrace $s");
       return OrangeResponse(
         id: currentId,
         countryCode: code,

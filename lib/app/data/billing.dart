@@ -70,7 +70,7 @@ class BillingResponse extends GScrapperResponse<BillingStatus> {
 class BillingScrapper extends GScrapper<BillingResponse> {
   static final BillingScrapper _instance = BillingScrapper._internal();
 
-  static const defaultTimeOutSeconds = 50;
+  static const defaultTimeOutSeconds = 30;
   factory BillingScrapper() {
     return _instance;
   }
@@ -118,7 +118,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
               landline: phone,
               newLandlineNumber:
                   (newLandline ?? "").isEmpty ? phone : newLandline,
-              status: BillingStatus.of(GStatus.error()),
+              status: BillingStatus.wrongNumber(),
             );
           }
           // number changed, request again with this number
@@ -219,11 +219,11 @@ class BillingScrapper extends GScrapper<BillingResponse> {
           deposit: resJson["Account"]["Customer"]["DepositValue"],
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       weToken = "";
       print(e.toString());
       RunLogger().newLine(
-          ">$currentId error: ${e.toString()} while the resContent was $resContent");
+          ">$currentId #billing error: $e while the resContent was $resContent. stacktrace $s");
       return BillingResponse(
         id: currentId,
         countryCode: code,
@@ -282,6 +282,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
     if (content.contains("has not changed")) {
       return null;
     }
+    RunLogger().newLine("$phone has chanched. $content");
     return content.split(">")[1].split("<")[0].split("-")[1].trim();
   }
 
