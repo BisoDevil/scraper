@@ -82,10 +82,16 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
     String currentId,
     String code,
     String phone,
+    {int tryNumber = 0}
   ) async {
     var resContent = "";
     try {
       if (etisalatCookie.isEmpty) {
+        RunLogger().newLine(">$currentId #etisalat @($code$phone) found empty cookie, try $tryNumber");
+        if(tryNumber <= 3) {
+          await _updateCookie();
+          return _scrape(currentId, code, phone, tryNumber: tryNumber + 1);
+        }
         return EtisalatResponse(
           countryCode: code,
           id: currentId,
@@ -95,7 +101,9 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
         );
       }
       var res = await _request(code, phone);
-      res.raiseForStatus();
+      if(!res.success) {
+        throw("not success request with status code ${res.statusCode}");
+      }
       if (res.statusCode == 302) {
         print("AMMAR:: Empty response waiting random seconds...");
         final randomTimeSecods = 5 + Random().nextInt(11 - 5); // from 5 to 10 seconds
@@ -203,6 +211,7 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
     );
     if (r1.statusCode == 403 ||
         r1.content().contains("اسم المستخدم او كلمة السر خطأ")) {
+      RunLogger().newLine(">00 update etisalat cookie says: wrong credentials");
       etisalatCookie = "";
     } else {
       etisalatCookie = r1.headers[HttpHeaders.setCookieHeader];
