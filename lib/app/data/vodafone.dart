@@ -5,7 +5,7 @@ import 'package:scraper/io/logger.dart';
 
 class VodafoneStatus extends GStatus {
   VodafoneStatus(String s) : super(s);
-  VodafoneStatus.of(GStatus s): this(s.value);
+  VodafoneStatus.of(GStatus s) : this(s.value);
 }
 
 class VodafoneResponse extends GScrapperResponse<VodafoneStatus> {
@@ -51,7 +51,12 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
     this.password = password;
     this.sfid = sfid;
 
-    await _updateToken();
+    vodafoneToken = await _getToken("INIT");
+    RunLogger()
+        .newLine("#vodafone initialized vodafone token with: $vodafoneToken");
+    if (vodafoneToken == null || vodafoneToken.isEmpty) {
+      throw ("Vodafone token is invalid, check your credentials and run again");
+    }
   }
 
   @override
@@ -67,18 +72,17 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
   Future<VodafoneResponse> _scrape(
     String currentId,
     String code,
-    String phone,
-  ) async {
+    String phone, {
+    int tryNumber = 0,
+  }) async {
     var resContent = "";
     try {
-      if (vodafoneToken.isEmpty) {
-        throw ("Can't authenticate user. not valid token");
-      }
       final currentToken = await _getToken(currentId);
       var res = await _request(code, phone, token: currentToken);
       resContent = res.content();
       if (res.statusCode == 401 || res.statusCode == 403) {
-        RunLogger().newLine(">$currentId vodafone - token expired or not valid, scrape again");
+        RunLogger().newLine(
+            ">$currentId vodafone - token expired or not valid, scrape again");
         // await _updateToken();
         return _scrape(currentId, code, phone);
       }
@@ -93,23 +97,31 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
           id: currentId,
           countryCode: code,
           landline: phone,
+          comment: "tried $tryNumber before with failed process",
         );
       } else {
         print(msg);
         final isErrorMesg = msg.contains("لم تنجح العملية");
-        return VodafoneResponse(
-          // status: isErrorMesg ? GStatus.error() : GStatus.reserved(),
-          status: VodafoneStatus.of(GStatus.reserved()),
-          id: currentId,
-          countryCode: code,
-          landline: phone,
-          comment: isErrorMesg ? "" : msg,
-          errorMessage: isErrorMesg ? msg : "",
-        );
+        if (isErrorMesg && tryNumber >= 4) {
+          // 5 time the server responds with that errorMessage, consider as reserved
+          RunLogger().newLine(">$currentId #vodafone @($phone$code) 5 times returned with failed proccess");
+          return VodafoneResponse(
+            // status: isErrorMesg ? GStatus.error() : GStatus.reserved(),
+            status: VodafoneStatus.of(GStatus.reserved()),
+            id: currentId,
+            countryCode: code,
+            landline: phone,
+            comment: isErrorMesg ? "" : msg,
+            errorMessage: isErrorMesg ? msg : "",
+            extras: {"tryNumber": tryNumber},
+          );
+        }
+        return _scrape(currentId, code, phone, tryNumber: tryNumber + 1);
       }
     } catch (e, s) {
       print("Catch vodafone error: " + e.toString());
-      RunLogger().newLine(">$currentId #vodafone error: $e while resContent=$resContent with stacktrace $s");
+      RunLogger().newLine(
+          ">$currentId #vodafone error: $e while resContent=$resContent with stacktrace $s");
 
       return VodafoneResponse(
         status: VodafoneStatus.of(GStatus.error()),
@@ -198,32 +210,6 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
         });
   }
 
-  Future<void> _updateToken() async {
-    print("_update token called");
-    var res = await requests.Requests.post(
-      "https://extranet.vodafone.com.eg/jwt/authenticate",
-      headers: {
-        'channel': '1',
-      },
-      timeoutSeconds: 30,
-      json: {
-        "username": username,
-        "password": password,
-        "sfid": sfid,
-      },
-    );
-    if (res.statusCode == 401) {
-      print("update token is not authorizd");
-      vodafoneToken = "";
-    } else {
-      vodafoneToken = res.json()["access_token"] ?? "";
-      print("vodafone token: $vodafoneToken");
-      if (vodafoneToken.isEmpty) {
-        print("vodafone token is empty ${res.json()}");
-      }
-    }
-  }
-
   Future<String> _getToken(String currentId) async {
     print("_getToken called");
     RunLogger().newLine(">$currentId get new token for vodafone");
@@ -246,7 +232,8 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
       t = res.json()["access_token"] ?? "";
       print("get token vodafone token: $t");
       if (t.isEmpty) {
-        RunLogger().newLine(">$currentId get token for vodafone returned empty access token ${res.content()}");
+        RunLogger().newLine(
+            ">$currentId get token for vodafone returned empty access token ${res.content()}");
         print("get token vodafone token is empty ${res.json()}");
       }
     }

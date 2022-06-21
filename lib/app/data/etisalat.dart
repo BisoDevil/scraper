@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:requests/requests.dart' as requests;
@@ -96,11 +97,12 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
       var res = await _request(code, phone);
       res.raiseForStatus();
       if (res.statusCode == 302) {
-        print("AMMAR:: Empty response waiting one second...");
-        RunLogger().newLine(">$currentId Etisalat returned Empty response 302, waiting one second");
-        // await _updateCookie();
+        print("AMMAR:: Empty response waiting random seconds...");
+        final randomTimeSecods = 5 + Random().nextInt(11 - 5); // from 5 to 10 seconds
+        RunLogger().newLine(">$currentId #etisalat @($code$phone) returned Empty response 302, waiting $randomTimeSecods seconds");
+        await _updateCookie();
         return Future.delayed(
-            Duration(seconds: 1), () => _scrape(currentId, code, phone));
+            Duration(seconds: randomTimeSecods), () => _scrape(currentId, code, phone));
         // return Future.delayed(
         //     Duration(seconds: 1),
         //     () => EtisalatResponse(

@@ -130,6 +130,7 @@ class LandlineProvidersManager {
           if (currentResponse.status != GStatus.error()) {
             break;
           }
+          log("SCAPPER:: $llid scrape $scrapper $tryIndex returned error ${currentResponse.errorMessage}");
           await waitAfterError(
               waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
         }
