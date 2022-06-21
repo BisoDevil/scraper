@@ -9,7 +9,7 @@ import 'package:scraper/io/logger.dart';
 
 class EtisalatStatus extends GStatus {
   EtisalatStatus(String s) : super(s);
-  EtisalatStatus.of(GStatus s): this(s.value);
+  EtisalatStatus.of(GStatus s) : this(s.value);
 }
 
 class EtisalatResponse extends GScrapperResponse<EtisalatStatus> {
@@ -78,17 +78,14 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
     return _scrape(currentId, code, phone);
   }
 
-  Future<EtisalatResponse> _scrape(
-    String currentId,
-    String code,
-    String phone,
-    {int tryNumber = 0}
-  ) async {
+  Future<EtisalatResponse> _scrape(String currentId, String code, String phone,
+      {int tryNumber = 0}) async {
     var resContent = "";
     try {
       if (etisalatCookie.isEmpty) {
-        RunLogger().newLine(">$currentId #etisalat @($code$phone) found empty cookie, try $tryNumber");
-        if(tryNumber <= 3) {
+        RunLogger().newLine(
+            ">$currentId #etisalat @($code$phone) found empty cookie, try $tryNumber");
+        if (tryNumber <= 3) {
           await _updateCookie();
           return _scrape(currentId, code, phone, tryNumber: tryNumber + 1);
         }
@@ -101,16 +98,29 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
         );
       }
       var res = await _request(code, phone);
-      if(!res.success) {
-        throw("not success request with status code ${res.statusCode}");
+      if (!res.success) {
+        throw ("not success request with status code ${res.statusCode}");
       }
       if (res.statusCode == 302) {
+        if (tryNumber >= 3) {
+          RunLogger().newLine(
+              ">$currentId #etisalat @($code$phone) found empty response, try $tryNumber");
+          return EtisalatResponse(
+            status: EtisalatStatus.of(GStatus.error()),
+            id: currentId,
+            countryCode: code,
+            landline: phone,
+            errorMessage: "302 redirected too much with trials $tryNumber",
+          );
+        }
         print("AMMAR:: Empty response waiting random seconds...");
-        final randomTimeSecods = 5 + Random().nextInt(11 - 5); // from 5 to 10 seconds
-        RunLogger().newLine(">$currentId #etisalat @($code$phone) returned Empty response 302, waiting $randomTimeSecods seconds");
+        final randomTimeSecods =
+            5 + Random().nextInt(11 - 5); // from 5 to 10 seconds
+        RunLogger().newLine(
+            ">$currentId #etisalat @($code$phone) returned Empty response 302, waiting $randomTimeSecods seconds");
         await _updateCookie();
-        return Future.delayed(
-            Duration(seconds: randomTimeSecods), () => _scrape(currentId, code, phone));
+        return Future.delayed(Duration(seconds: randomTimeSecods),
+            () => _scrape(currentId, code, phone, tryNumber: tryNumber + 1));
         // return Future.delayed(
         //     Duration(seconds: 1),
         //     () => EtisalatResponse(
@@ -171,7 +181,8 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
         errorMessage: resContent,
       );
     } catch (e, s) {
-      RunLogger().newLine(">$currentId #etisalat error: $e while resContent=$resContent with stacktrace $s");
+      RunLogger().newLine(
+          ">$currentId #etisalat error: $e while resContent=$resContent with stacktrace $s");
       return EtisalatResponse(
         id: currentId,
         countryCode: code,
