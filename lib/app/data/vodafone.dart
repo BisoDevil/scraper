@@ -84,7 +84,19 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
         RunLogger().newLine(
             ">$currentId vodafone - token expired or not valid, scrape again");
         // await _updateToken();
-        return _scrape(currentId, code, phone);
+        return _scrape(currentId, code, phone, tryNumber: tryNumber);
+      }
+      if (res.content().contains("Request Rejected")) {
+        RunLogger().newLine(">$currentId vodafone - rejected");
+        return Future.delayed(
+          Duration(seconds: 10),
+          () => VodafoneResponse(
+              status: VodafoneStatus.of(GStatus.error()),
+              id: currentId,
+              countryCode: code,
+              landline: phone,
+              errorMessage: "Error: request rejected from vodafone"),
+        );
       }
       final errObj = (res.json() ?? {})['error'];
       if (errObj == null) {
@@ -102,9 +114,22 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
       } else {
         print(msg);
         final isErrorMesg = msg.contains("لم تنجح العملية");
-        if (isErrorMesg && tryNumber >= 4) {
+        if(!isErrorMesg) {
+          return VodafoneResponse(
+            // status: isErrorMesg ? GStatus.error() : GStatus.reserved(),
+            status: VodafoneStatus.of(GStatus.reserved()),
+            id: currentId,
+            countryCode: code,
+            landline: phone,
+            comment: msg,
+            errorMessage: "try number $tryNumber",
+            extras: {"tryNumber": tryNumber},
+          );
+        }
+        if (tryNumber >= 4) {
           // 5 time the server responds with that errorMessage, consider as reserved
-          RunLogger().newLine(">$currentId #vodafone @($phone$code) 5 times returned with failed proccess");
+          RunLogger().newLine(
+              ">$currentId #vodafone @($phone$code) 5 times returned with failed proccess");
           return VodafoneResponse(
             // status: isErrorMesg ? GStatus.error() : GStatus.reserved(),
             status: VodafoneStatus.of(GStatus.reserved()),
