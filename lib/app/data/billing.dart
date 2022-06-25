@@ -12,7 +12,7 @@ class BillingStatus extends GStatus {
   static const _pin = "pin";
 
   BillingStatus(String s) : super(s);
-  BillingStatus.of(GStatus s): this(s.value);
+  BillingStatus.of(GStatus s) : this(s.value);
 
   factory BillingStatus.wrongNumber() {
     return BillingStatus(BillingStatus._wrongNumber);
@@ -142,6 +142,19 @@ class BillingScrapper extends GScrapper<BillingResponse> {
             status: BillingStatus.pin(),
             comment: resContent);
       }
+      if (resContent.contains("An unexcepeted error occurred")) {
+        RunLogger().newLine(
+            ">$currentId #billing we returned unexcepeted error occurred");
+        return BillingResponse(
+          id: currentId,
+          countryCode: code,
+          landline: phone,
+          newLandlineNumber: phone,
+          status: BillingStatus.of(GStatus.error()),
+          errorMessage: "error: An unexcepeted error occurred",
+          comment: "call 111"
+        );
+      }
 
       final resJson = res.json();
       if (resJson["Account"] == null) {
@@ -243,7 +256,9 @@ class BillingScrapper extends GScrapper<BillingResponse> {
     }
     RunLogger().newLine(">$llid we token is empty, update token");
     var res = await requests.Requests.get(
-        "https://api-my.te.eg/api/user/generatetoken?channelId=WEB_APP");
+      "https://api-my.te.eg/api/user/generatetoken?channelId=WEB_APP",
+      timeoutSeconds: defaultTimeOutSeconds,
+    );
     weToken = res.json()["body"]["jwt"];
     RunLogger().newLine(">$llid new we token is generated = $weToken");
   }
@@ -277,11 +292,11 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         "PhoneNumber": phone.trim(),
         // "InquiryBy": "telephone",
       },
-      
       verify: false,
       timeoutSeconds: defaultTimeOutSeconds,
     );
-    if(res.headers.containsKey("inquirystatus") && res.headers["inquirystatus"] == "RequirePinCode") {
+    if (res.headers.containsKey("inquirystatus") &&
+        res.headers["inquirystatus"] == "RequirePinCode") {
       return "pin";
     }
     final content = res.content();

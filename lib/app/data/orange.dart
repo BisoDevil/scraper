@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get_connect.dart';
 import 'package:scraper/app/data/common.dart';
 import 'package:scraper/io/logger.dart';
@@ -69,13 +69,18 @@ class OrangeScrapper extends GScrapper<OrangeResponse> {
     String currentId,
     String code,
     String phone,
+    {int tryNumber = 0}
   ) async {
     var resContent = "";
     try {
       var res = await _request(code, phone);
       resContent = res.bodyString;
       if (resContent == null) {
-        RunLogger().newLine(">$currentId orange - rescontent is null, status code = ${res.statusCode}");
+        RunLogger().newLine(">$currentId orange - null body, scode=${res.statusCode}, stext=${res.statusText}");
+        if(tryNumber <= 2) {
+          return _scrape(currentId, code, phone, tryNumber: tryNumber + 1);
+        }
+        RunLogger().newLine(">$currentId orange tryNum=$tryNumber");
         return OrangeResponse(
           status: OrangeStatus.of(GStatus.error()),
           id: currentId,
