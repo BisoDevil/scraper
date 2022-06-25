@@ -51,7 +51,7 @@ class HomeController extends GetxController {
       RunLogger().directTo("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
       writeLogLine("Start crawling......");
       prefs = await AppPreferences.getInstance();
-      if(allowArdy) {
+      if (allowArdy) {
         BillingScrapper().init(gracePeriodDays: prefs.gracePeriodDays);
       }
       if (allowEtisalat) {
@@ -65,29 +65,32 @@ class HomeController extends GetxController {
       var ls = LineSplitter();
       var lines = ls.convert(phoneText.trim());
       var i = 0;
-      // List<LandlineProvidersResponse> responses = [];
-      final pool = Pool(prefs.maxPooling, timeout: Duration(days: 2));
+      // final pool = Pool(prefs.maxPooling, timeout: Duration(days: 2));
+      final batchPooler = Pool(prefs.maxPooling, timeout: Duration(days: 2));
       for (var iline = 0; iline < lines.length; iline++) {
         final line = lines[iline];
         final _data = line.split("-");
         final code = _data.first;
         final phone = _data[1];
         final id = (iline + 1).toString();
-        pool.withResource(() async {
-          final response = await LandlineProvidersManager().validateNumber(
-            llid: id,
-            code: code.startsWith("0") ? code : "0$code",
-            phone: phone,
-            allowEtisalat: allowEtisalat,
-            allowVodafone: allowVodafone,
-            allowOrange: allowOrange,
-            allowWe: allowWe,
-            allowBilling: allowArdy,
-            trials: prefs.numTrialsOnError,
-            waitAfterErrorMaxMillis: prefs.maxWaitAfterErrorMills,
-            waitAfterErrorMinMillis: prefs.minWaitAfterErrorMills,
-            writeLog: writeLogLine,
-          );
+        final resource = await batchPooler.request();
+        LandlineProvidersManager()
+            .validateNumber(
+          llid: id,
+          code: code.startsWith("0") ? code : "0$code",
+          phone: phone,
+          allowEtisalat: allowEtisalat,
+          allowVodafone: allowVodafone,
+          allowOrange: allowOrange,
+          allowWe: allowWe,
+          allowBilling: allowArdy,
+          trials: prefs.numTrialsOnError,
+          waitAfterErrorMaxMillis: prefs.maxWaitAfterErrorMills,
+          waitAfterErrorMinMillis: prefs.minWaitAfterErrorMills,
+          writeLog: writeLogLine,
+        )
+            .then((response) {
+          resource.release();
           i++;
           progress.value = i / lines.length;
           current.value = "$i/${lines.length}";
@@ -105,6 +108,10 @@ class HomeController extends GetxController {
             writeBatch();
             refineLog();
           }
+        }).catchError((e) {
+          print("Error in handling validate number response: ${e.toString()}");
+          writeLogLine(
+              "error in handling validate number response. ${e.toString()}");
         });
       }
     } catch (e) {

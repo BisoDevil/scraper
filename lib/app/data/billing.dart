@@ -109,16 +109,18 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         do {
           phone = newLandline.isEmpty ? phone : newLandline;
           newLandline = await checkChangedLanline(code, phone);
+          final wrong = newLandline == null, pin = newLandline == "pin";
           // telephone doesn't exist, wrong number or changed
-          if (newLandline == null) {
-            // wrong number
+          if (wrong || pin) {
+            // wrong number or pin
             return BillingResponse(
               countryCode: code,
               id: currentId,
               landline: phone,
               newLandlineNumber:
                   (newLandline ?? "").isEmpty ? phone : newLandline,
-              status: BillingStatus.wrongNumber(),
+              status: wrong ? BillingStatus.wrongNumber() : BillingStatus.pin(),
+              comment: pin ? "Can't get new number of that number" : "",
             );
           }
           // number changed, request again with this number
@@ -275,14 +277,19 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         "PhoneNumber": phone.trim(),
         // "InquiryBy": "telephone",
       },
+      
       verify: false,
       timeoutSeconds: defaultTimeOutSeconds,
     );
+    if(res.headers.containsKey("inquirystatus") && res.headers["inquirystatus"] == "RequirePinCode") {
+      return "pin";
+    }
     final content = res.content();
     if (content.contains("has not changed")) {
       return null;
     }
     RunLogger().newLine("$phone has chanched. $content");
+    print("content: " + content);
     return content.split(">")[1].split("<")[0].split("-")[1].trim();
   }
 

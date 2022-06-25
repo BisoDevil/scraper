@@ -19,7 +19,8 @@ class RunLogger {
 
   void newLine(String line, {swallowError = true}) {
     try {
-      _xfile.writeAsStringSync(line + "\n", mode: FileMode.append);
+        final timestamp = DateTime.now().toString().split(" ")[1];
+      _xfile.writeAsStringSync(timestamp + ": " + line + "\n", mode: FileMode.writeOnlyAppend);
     } catch (e) {
       print("Can't write log line: " + e.toString());
     }

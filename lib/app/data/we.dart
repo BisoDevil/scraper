@@ -68,6 +68,9 @@ class WeScrapper extends GScrapper<WeResponse> {
       var res = await _request(code, phone);
       resContent = res.bodyString;
       final body = res.body;
+      if(res.hasError) {
+        throw("unexpected response, status code ${res.statusCode}");
+      }
       if (body["body"] == null) {
         String msg = body["header"]["responseMessage"];
         if (msg.contains("Subscriber information is not exist")) {

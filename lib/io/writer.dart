@@ -35,13 +35,10 @@ class Writer {
       "CC",
       "LL",
     ];
-    String oldContent = "";
     if (!xfile.existsSync()) {
       xfile.createSync();
       lines.add("\n");
       lines.add(headers.join(","));
-    } else if (shouldContinue) {
-      oldContent = xfile.readAsStringSync() + "\n";
     }
     for (var billResponse in billingResponses) {
       var billExistenceDays = "";
@@ -70,7 +67,8 @@ class Writer {
           .toList();
       lines.add(values.join(","));
     }
-    xfile.writeAsStringSync(oldContent + lines.join("\n"));
+    final fmode = shouldContinue ? FileMode.writeOnlyAppend : FileMode.write;
+    xfile.writeAsStringSync(lines.join("\n") + "\n", mode: fmode);
   }
 
   void writeGeneralExcelSheet(
@@ -97,13 +95,10 @@ class Writer {
       "vodafone error",
       "Status",
     ];
-    String oldContent = "";
     if (!xfile.existsSync()) {
       xfile.createSync();
       lines.add("\n");
       lines.add(headers.join(","));
-    } else if (shouldContinue) {
-      oldContent = xfile.readAsStringSync() + "\n";
     }
     for (var response in responses) {
       
@@ -135,12 +130,7 @@ class Writer {
           .toList();
       lines.add(values.join(","));
     }
-    xfile.writeAsStringSync(
-      oldContent + lines.join("\n"),
-      // lines.join(lines.join("\n")),
-      // mode: FileMode.append,
-      // flush: true,
-      // encoding: Windows1256Codec(),
-    );
+    final fmode = shouldContinue ? FileMode.writeOnlyAppend : FileMode.write;
+    xfile.writeAsStringSync(lines.join("\n") + "\n", mode: fmode);
   }
 }
