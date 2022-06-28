@@ -111,9 +111,9 @@ class OrangeScrapper extends GScrapper<OrangeResponse> {
         countryCode: code,
         id: currentId,
         landline: phone,
-        comment: (isNoBill ^ hasBill) ? "" : "Check manually !",
+        comment: (isNoBill ^ hasBill) ? "has bill = $hasBill" : "Check manually !",
         extras: {"hasBill": hasBill, "isNoBill": isNoBill},
-        status: OrangeStatus.of(GStatus.reserved()),
+        status: (isNoBill ^ hasBill) ? OrangeStatus.of(GStatus.reserved()) : OrangeStatus.of(GStatus.error()),
       );
     } catch (e, s) {
       print(e.toString());

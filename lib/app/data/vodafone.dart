@@ -126,10 +126,10 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
             extras: {"tryNumber": tryNumber},
           );
         }
-        if (tryNumber >= 4) {
-          // 5 time the server responds with that errorMessage, consider as reserved
+        if (tryNumber >= 2) {
+          // 3 time the server responds with that errorMessage, consider as reserved
           RunLogger().newLine(
-              ">$currentId #vodafone @($phone$code) 5 times returned with failed proccess");
+              ">$currentId #vodafone @($phone$code) 3 times returned with failed proccess");
           return VodafoneResponse(
             // status: isErrorMesg ? GStatus.error() : GStatus.reserved(),
             status: VodafoneStatus.of(GStatus.reserved()),

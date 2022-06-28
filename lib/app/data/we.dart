@@ -69,7 +69,7 @@ class WeScrapper extends GScrapper<WeResponse> {
       resContent = res.bodyString;
       final body = res.body;
       if(res.hasError) {
-        throw("unexpected response, status code ${res.statusCode}");
+        throw("unexpected response, status code ${res.statusCode}, statusText ${res.statusText}");
       }
       if (body["body"] == null) {
         String msg = body["header"]["responseMessage"];
@@ -83,7 +83,7 @@ class WeScrapper extends GScrapper<WeResponse> {
           );
         } else {
           return WeResponse(
-            status: WeStatus.of(GStatus.notReserved()),
+            status: WeStatus.of(GStatus.reserved()),
             id: currentId,
             countryCode: code,
             landline: phone,
