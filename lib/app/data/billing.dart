@@ -150,7 +150,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
           countryCode: code,
           landline: phone,
           newLandlineNumber: phone,
-          status: BillingStatus.of(GStatus.error()),
+          status: BillingStatus.pin(),
           errorMessage: "error: An unexcepeted error occurred",
           comment: "call 111"
         );
