@@ -43,6 +43,7 @@ class OrangeScrapper extends GScrapper<OrangeResponse> {
 
   void init({int confidenceTrials = 3}) {
     this.confidenceTrials = confidenceTrials;
+    RunLogger().newLine("#orange init with confidenceTrials $confidenceTrials");
   }
 
   int id = 1;

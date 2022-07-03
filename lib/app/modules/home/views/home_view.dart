@@ -21,7 +21,15 @@ class HomeView extends GetView<HomeController> {
             icon: Icon(
               Icons.settings,
             ),
-          )
+          ),
+          IconButton(
+            onPressed: () {
+              Get.toNamed(Routes.WORKFLOW);
+            },
+            icon: Icon(
+              Icons.workspaces,
+            ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(

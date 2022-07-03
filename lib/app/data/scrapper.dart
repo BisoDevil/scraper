@@ -55,7 +55,7 @@ class LandlineProvidersResponse {
   String get comment {
     String res = "";
     for (var ele in responses) {
-      res += (ele?.comment ?? "").isNotEmpty ? "<${ele.name}: ${ele.comment}> " : "";
+      res += (ele?.comment ?? "").isNotEmpty ? "<${ele.name}> ${ele.comment} </${ele.name}>" : "";
     }
     return res;
   }

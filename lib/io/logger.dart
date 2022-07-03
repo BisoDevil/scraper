@@ -17,6 +17,10 @@ class RunLogger {
     }
   }
 
+  void directToDummy() {
+    _xfile = _DummyFile();
+  }
+
   void newLine(String line, {swallowError = true}) {
     try {
         final timestamp = DateTime.now().toString().split(" ")[1];

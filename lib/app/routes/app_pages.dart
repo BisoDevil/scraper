@@ -1,6 +1,8 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:get/get.dart';
+import 'package:scraper/app/modules/workflow/bindings/workflow_binding.dart';
+import 'package:scraper/app/modules/workflow/views/workflow.dart';
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -24,6 +26,11 @@ class AppPages {
       name: _Paths.SETTINGS,
       page: () => SettingsView(),
       binding: SettingsBinding(),
+    ),
+    GetPage(
+      name: _Paths.WORKFLOW,
+      page: () => WorkflowView(),
+      binding: WorkflowBinding(),
     ),
   ];
 }
