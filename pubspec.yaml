@@ -19,6 +19,7 @@ dependencies:
   path_provider: ^2.0.8
   pool: ^1.4.0
   enough_convert: ^1.6.0
+  interpolator: ^0.1.0
 
   
  
