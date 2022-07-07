@@ -61,6 +61,9 @@ class LandlineProvidersResponse {
   }
 }
 
+/// this class is responsible for handling all providers
+/// It can handle only one number for all providers, give you the final status of that number
+/// Doesn't do batch scrapping over wide numbers. 
 class LandlineProvidersManager {
   // File logFile;
   static final LandlineProvidersManager _instance =
@@ -108,6 +111,7 @@ class LandlineProvidersManager {
       ];
 
       var reserved = false;
+      var providerOrMoreHaveError = false;
       var ownerProvider = "";
       for (var i = 0; i < scrappers.length; i++) {
         if (!allowList[i]) continue;
@@ -134,18 +138,22 @@ class LandlineProvidersManager {
           await waitAfterError(
               waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
         }
+        providerOrMoreHaveError = providerOrMoreHaveError || currentResponse.status == GStatus.error();
         reserved = currentResponse.status == GStatus.reserved();
         ownerProvider = scrapper.toString();
         responsesList[i] = currentResponse;
         if(reserved) break;
       }
-
+      var finalStatus = LandlineProvidersStatus.notReserved;
+      if(reserved) {
+        finalStatus = LandlineProvidersStatus.reserved;
+      } else if(providerOrMoreHaveError){ 
+        finalStatus = LandlineProvidersStatus.error;
+      }
       return LandlineProvidersResponse(
-        reserved
-            ? LandlineProvidersStatus.reserved
-            : LandlineProvidersStatus.notReserved,
+        finalStatus,
         generalResponse:
-            reserved ? "reserved in " + ownerProvider : "not reserved",
+            reserved ? "reserved in " + ownerProvider : finalStatus.name,
         billingResponse: responsesList[0],
         weResponse: responsesList[1],
         etisalatResponse: responsesList[2],
