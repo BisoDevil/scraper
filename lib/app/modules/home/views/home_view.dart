@@ -37,7 +37,7 @@ class HomeView extends GetView<HomeController> {
           Icons.play_arrow_outlined,
         ),
         onPressed: () async {
-          controller.startWeb();
+          controller.testInputFile();
           // for (var i = 0; i < 10; i++) {
           //   Scrapper.scraperWe("code", "phone");
           // }
@@ -79,25 +79,49 @@ class HomeView extends GetView<HomeController> {
                           GetBuilder<HomeController>(
                             initState: (_) {},
                             builder: (_) {
-                              return TextFormField(
-                                readOnly: true,
-                                controller: TextEditingController(
-                                    text: controller.file?.path),
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  suffixIcon: TextButton.icon(
-                                    onPressed: () {
-                                      controller.pickFile();
-                                    },
-                                    icon: Icon(Icons.file_upload),
-                                    label: Text(
-                                      "Load File",
-                                      style: Get.textTheme.button.copyWith(
-                                        color: Colors.black,
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButton(
+                                      borderRadius: BorderRadius.circular(10),
+                                      value: controller.inputType.value,
+                                      items: InputType.values
+                                          .map((e) => DropdownMenuItem(
+                                                value: e,
+                                                child: Text(e.name),
+                                              ))
+                                          .toList(),
+                                      
+                                      onChanged: (v) {
+                                        controller.inputType(v);
+                                        controller.update();
+                                      },
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: TextFormField(
+                                      readOnly: true,
+                                      controller: TextEditingController(
+                                          text: controller.file?.path),
+                                      decoration: InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        suffixIcon: TextButton.icon(
+                                          onPressed: () {
+                                            controller.pickFile();
+                                          },
+                                          icon: Icon(Icons.file_upload),
+                                          label: Text(
+                                            "Load File",
+                                            style:
+                                                Get.textTheme.button.copyWith(
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
+                                ],
                               );
                             },
                           ),
@@ -110,7 +134,7 @@ class HomeView extends GetView<HomeController> {
                               return TextFormField(
                                 readOnly: controller.isRunning.value,
                                 initialValue: controller.singleLandline.value,
-                                onChanged: controller.updateSingleLine,
+                                onChanged: controller.singleLandline,
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
                                   suffixIcon: TextButton.icon(

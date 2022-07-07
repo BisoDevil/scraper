@@ -1,26 +1,28 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 
 import 'package:get/get.dart';
-import 'package:scraper/app/data/billing.dart';
-import 'package:scraper/app/data/etisalat.dart';
 
 import 'package:scraper/app/data/scrapper.dart';
-import 'package:pool/pool.dart';
-import 'package:scraper/app/data/vodafone.dart';
+import 'package:scraper/app/modules/workflow/workflow_executor.dart';
 import 'package:scraper/io/logger.dart';
-import 'package:scraper/io/writer.dart';
 import 'package:scraper/utils/preferences.dart';
 
 import 'package:intl/intl.dart';
+
+enum InputType {numbers, billing, general, raw}
+
 
 class HomeController extends GetxController {
   AppPreferences prefs;
   String phoneText = "";
   var singleLandline = "".obs;
   var log = "Logs of last run:".obs;
+  String input;
+  var inputType = InputType.numbers.obs;
   File file;
   var progress = 0.0.obs;
   var current = "".obs;
@@ -34,114 +36,62 @@ class HomeController extends GetxController {
   List<LandlineProvidersResponse> responses = [];
   DateTime startTime;
   DateTime endTime;
-  String billingCSVPath;
-  String generalCSVPath;
   void startWeb() async {
+    WorkflowExector wfe;
+    StreamSubscription pl, cl, jil;
     try {
-      isRunning(true);
-      log.value = "";
-      progress.value = 0;
-      current.value = "";
-      startTime = DateTime.now();
+      if (isRunning.value) {
+        writeLogLine("can't start workflow while another one is not finished");
+        return;
+      }
       var dir = Directory(Platform.resolvedExecutable).parent.path;
-      billingCSVPath =
+      final billingCSVPath =
           "$dir/billing_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
-      generalCSVPath =
+      final generalCSVPath =
           "$dir/general_${DateFormat("y-M-d H-m").format(DateTime.now())}.csv";
-      RunLogger().directTo("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
-      writeLogLine("Start crawling......");
-      prefs = await AppPreferences.getInstance();
-      if (allowArdy) {
-        BillingScrapper().init(gracePeriodDays: prefs.gracePeriodDays);
-      }
-      if (allowEtisalat) {
-        await EtisalatScrapper()
-            .init(prefs.etisalatUsername, prefs.etisalatPassword);
-      }
-      if (allowVodafone) {
-        await VodafoneScrapper().init(
-            prefs.vodafoneUsername, prefs.vodafonePassword, prefs.vodafoneSID);
-      }
-      var ls = LineSplitter();
-      var lines = ls.convert(phoneText.trim());
-      var i = 0;
-      // final pool = Pool(prefs.maxPooling, timeout: Duration(days: 2));
-      final batchPooler = Pool(prefs.maxPooling, timeout: Duration(days: 2));
-      for (var iline = 0; iline < lines.length; iline++) {
-        final line = lines[iline];
-        final _data = line.split("-");
-        final code = _data.first;
-        final phone = _data[1];
-        final id = (iline + 1).toString();
-        final resource = await batchPooler.request();
-        LandlineProvidersManager()
-            .validateNumber(
-          llid: id,
-          code: code.startsWith("0") ? code : "0$code",
-          phone: phone,
-          allowEtisalat: allowEtisalat,
-          allowVodafone: allowVodafone,
-          allowOrange: allowOrange,
-          allowWe: allowWe,
-          allowBilling: allowArdy,
-          trials: prefs.numTrialsOnError,
-          waitAfterErrorMaxMillis: prefs.maxWaitAfterErrorMills,
-          waitAfterErrorMinMillis: prefs.minWaitAfterErrorMills,
-          writeLog: writeLogLine,
-        )
-            .then((response) {
-          resource.release();
-          i++;
-          progress.value = i / lines.length;
-          current.value = "$i/${lines.length}";
-          writeLogLine(
-              "[!] 0$line is ${response.status.name} (${response.generalResponse})");
-          responses.add(response);
-          if (i >= lines.length) {
-            endTime = DateTime.now();
-            writeLogLine(
-                "Finished...... (Takes ${endTime.difference(startTime).toString()})");
-            writeBatch();
-            isRunning(false);
-          } else if ((i - 1) % prefs.batchCapacity == 0) {
-            // write each 1000 billingResponses in batches in the excel sheet
-            writeBatch();
-            refineLog();
-          }
-        }).catchError((e) {
-          print("Error in handling validate number response: ${e.toString()}");
-          writeLogLine(
-              "error in handling validate number response. ${e.toString()}");
-        });
-      }
-    } catch (e) {
-      print("Error in starting crawling: ${e.toString()}");
-      writeLogLine("error in starting crawling. ${e.toString()}");
+      final logPath =
+          "$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt";
+      wfe = WorkflowExector({
+        "jobs": [
+          {
+            "name": "home defaut workflow",
+            "input": input,
+            "inputType": inputType.value.name,
+            "providers": [
+              ...(allowEtisalat ? ['etisalat'] : []),
+              ...(allowVodafone ? ['vodafone'] : []),
+              ...(allowOrange ? ['orange'] : []),
+              ...(allowWe ? ['we'] : []),
+              ...(allowArdy ? ['billing'] : []),
+            ],
+            "filters": {"variables": [], "summation": "or"},
+            "filterStrategy": "conserve",
+            "output_billing": billingCSVPath,
+            "output_general": generalCSVPath,
+            "output_log": logPath,
+          },
+        ],
+      }, writeLog: writeLogLine);
+      pl = wfe.progress.listen(progress);
+      cl = wfe.current.listen(current);
+      isRunning(true);
+      await wfe.start();
+    } catch (e, s) {
+      print(s);
+      RunLogger().newLine("start default home workflow error: $e");
+      writeLogLine("start default workflow error: $e");
+    } finally {
+      isRunning(false);
+      pl?.cancel();
+      cl?.cancel();
+      jil?.cancel();
     }
-  }
-
-  writeBatch() {
-    if (allowArdy) {
-      final list = responses.map((e) => e.billingResponse).toList();
-      Writer().writeBillingExcelSheet(
-        list,
-        path: billingCSVPath,
-        shouldContinue: true,
-      );
-    }
-    if ([allowEtisalat, allowOrange, allowVodafone, allowWe]
-        .any((element) => element)) {
-      // write responses of providers
-      Writer().writeGeneralExcelSheet(responses,
-          path: generalCSVPath, shouldContinue: true);
-    }
-    responses.clear();
   }
 
   writeLogLine(String line) {
     print("AMMAR:: write log line: " + line);
     log(log.value + "\n$line");
-    // TODO: take care of thread-safe
+    refineLog();
     RunLogger().newLine(line);
   }
 
@@ -153,10 +103,6 @@ class HomeController extends GetxController {
 
     if (result != null) {
       file = File(result.files.single.path);
-
-      var content = await file.readAsString();
-
-      phoneText = content.replaceAll(",", "-");
 
       var ls = LineSplitter();
       var numLines = ls.convert(phoneText.trim()).length;
@@ -171,7 +117,6 @@ class HomeController extends GetxController {
 
   @override
   void onInit() async {
-    // TODO: implement onInit
     prefs = await AppPreferences.getInstance();
     super.onInit();
   }
@@ -182,12 +127,15 @@ class HomeController extends GetxController {
     }
   }
 
-  void testSingleLine() {
-    phoneText = singleLandline.value;
+  void testInputFile() {
+    input = file.path;
+    inputType(InputType.numbers);
     startWeb();
   }
 
-  void updateSingleLine(String v) {
-    singleLandline(v);
+  void testSingleLine() {
+    input = singleLandline.value;
+    inputType(InputType.raw);
+    startWeb();
   }
 }
