@@ -144,14 +144,15 @@ class WorkflowExector {
       final batchPooler = Pool(maxPooling, timeout: Duration(days: 2));
       var i = 0;
       for (var iline = 0; iline < input.numbers.length; iline++) {
-        final line = input.numbers[iline];
+        final id = input.numbers[iline];
+        final line = input.params[id]['number'];
         final _data = line.split("-");
         final code = _data.first;
         final phone = _data[1];
-        final id = input.params[line]['id'] ?? (iline + 1).toString();
+        // final id = input.params[line]['id'] ?? (iline + 1).toString();
 
         /// set record vars
-        for (var item in input.params[line].entries) {
+        for (var item in input.params[id].entries) {
           globalVars["$id.record.${item.key}"] = item.value;
         }
         final resource = await batchPooler.request();
@@ -214,7 +215,7 @@ class WorkflowExector {
     unsetRecord(id); // release memory
     progress(i / input.numbers.length);
     current("$i/${input.numbers.length}");
-    response = rebuildLandlineResponse(response, input, line);
+    response = rebuildLandlineResponse(response, input, id);
     if (shouldLog) {
       writeLog(
           "[!] 0$line is ${response.status.name} (${response.generalResponse})");
@@ -263,9 +264,9 @@ class WorkflowExector {
   LandlineProvidersResponse rebuildLandlineResponse(
     LandlineProvidersResponse base,
     WorkflowInput input,
-    line,
+    id,
   ) {
-    final lparams = input.params[line];
+    final lparams = input.params[id];
     base ??= LandlineProvidersResponse(
         LandlineProvidersStatus.values.firstWhere((element) =>
             element.name == lparams['status'] ?? lparams['billing']),

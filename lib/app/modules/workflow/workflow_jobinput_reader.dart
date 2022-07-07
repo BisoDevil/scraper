@@ -4,17 +4,24 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 class JobInputReader {
-  static WorkflowInput read(String path, String type) {
+  static WorkflowInput read(String input, String type) {
     switch (type) {
       case "billing":
-        return readBilling(path);
+        return readBilling(input);
       case "numbers":
-        return readNumbers(path);
+        return readNumbers(input);
       case "general":
-        return readGeneral(path);
+        return readGeneral(input);
+      case "raw":
+        return readRow(input);
       default:
         throw ("type $type is not valid. only accept billing, numbers or general");
     }
+  }
+
+  static WorkflowInput readRow(String input) {
+    final numbers = input.split(';');
+    return WorkflowInput(numbers: numbers);
   }
 
   static WorkflowInput readNumbers(String path) {
@@ -40,8 +47,10 @@ class JobInputReader {
       // id, countryCode, landline, TEBills, Comment, error message, LastBillAmount, CustomerCategory, billExistenceDays, DEPOSIT, CC, LL
       // 0      1             2        3        4           5             6                 7               8                9     10  11
       final number = "${values[1]}-${values[2]}";
-      params[number] = {
-        "id": values[0],
+      final id = values[0];
+      params[id] = {
+        "number": number,
+        "id": id,
         "code": values[1],
         "landline": values[2],
         "billing": values[3],
@@ -60,7 +69,7 @@ class JobInputReader {
             ? "excludedNumber"
             : "notReserved",
       };
-      numbers[i - 1] = number;
+      numbers[i - 1] = id;
     }
     return WorkflowInput(numbers: numbers, params: params);
   }
@@ -79,8 +88,10 @@ class JobInputReader {
       //ID	countryCode	landline	comment	billing	      we	        etisalat	       orange	        vodafone	         we error	etisalat error	orange error	vodafone error	Status
       // 0      1          2        3        4           5             6                 7               8                9           10            11             12           13
       final number = "${values[1]}-${values[2]}";
-      params[number] = {
-        "id": values[0],
+      final id = values[0];
+      params[id] = {
+        "number": number,
+        "id": id,
         "code": values[1],
         "landline": values[2],
         "Comment": values[3],
@@ -95,7 +106,7 @@ class JobInputReader {
         "vodafone_error": values[12],
         "status": values[13],
       };
-      numbers[i - 1] = number;
+      numbers[i - 1] = id;
     }
     return WorkflowInput(numbers: numbers, params: params);
   }
@@ -107,8 +118,15 @@ class WorkflowInput {
   WorkflowInput({@required this.numbers, this.params}) {
     if (params == null) {
       params = {};
-      for (var n in numbers) {
-        params[n] = {};
+      for (var i = 0; i < numbers.length; i++) {
+        final number = numbers[i];
+        final id = (i + 1).toString();
+        numbers[i] = id;
+        params[id] = {
+          "id": id,
+          "landline": number,
+          "number": number,
+        };
       }
     }
   }
