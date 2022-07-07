@@ -56,6 +56,7 @@ class WorkflowExector {
         //? may want to interpolate option.value
         setJobVar('options.${option.key}', option.value);
       }
+      RunLogger().directTo(jobVars('output_log'));
       writeLog("WORKFLOW:: starting job $jobIndex (${currentJob['name']})");
       // for each job:
       // we init the job options
@@ -139,7 +140,6 @@ class WorkflowExector {
       final billingCSVPath = jobVars('output_billing').toString();
       final generalCSVPath = jobVars('output_general').toString();
       final providers = job['providers'];
-      RunLogger().directTo(jobVars('output_log'));
       writeLog("Start crawling with pooling $maxPooling......");
       final batchPooler = Pool(maxPooling, timeout: Duration(days: 2));
       var i = 0;
