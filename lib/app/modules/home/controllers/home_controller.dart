@@ -10,15 +10,14 @@ import 'package:scraper/app/data/scrapper.dart';
 import 'package:scraper/app/modules/workflow/workflow_executor.dart';
 import 'package:scraper/io/logger.dart';
 import 'package:scraper/utils/preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import 'package:intl/intl.dart';
 
-enum InputType {numbers, billing, general, raw}
-
+enum InputType { numbers, billing, general, raw }
 
 class HomeController extends GetxController {
   AppPreferences prefs;
-  String phoneText = "";
   var singleLandline = "".obs;
   var log = "Logs of last run:".obs;
   String input;
@@ -36,8 +35,10 @@ class HomeController extends GetxController {
   List<LandlineProvidersResponse> responses = [];
   DateTime startTime;
   DateTime endTime;
+
+  var isConnected = false.obs;
+  WorkflowExector wfe;
   void startWeb() async {
-    WorkflowExector wfe;
     StreamSubscription pl, cl, jil;
     try {
       if (isRunning.value) {
@@ -75,6 +76,7 @@ class HomeController extends GetxController {
       pl = wfe.progress.listen(progress);
       cl = wfe.current.listen(current);
       isRunning(true);
+      update();
       await wfe.start();
     } catch (e, s) {
       print(s);
@@ -82,6 +84,7 @@ class HomeController extends GetxController {
       writeLogLine("start default workflow error: $e");
     } finally {
       isRunning(false);
+      update();
       pl?.cancel();
       cl?.cancel();
       jil?.cancel();
@@ -103,7 +106,7 @@ class HomeController extends GetxController {
 
     if (result != null) {
       file = File(result.files.single.path);
-
+      final phoneText = file.readAsStringSync();
       var ls = LineSplitter();
       var numLines = ls.convert(phoneText.trim()).length;
       writeLogLine("files read successfully with $numLines numbers");
@@ -118,7 +121,23 @@ class HomeController extends GetxController {
   @override
   void onInit() async {
     prefs = await AppPreferences.getInstance();
+    Connectivity().onConnectivityChanged.listen((connectivity) {
+      isConnected.value = connectivity == ConnectivityResult.wifi ||
+          connectivity == ConnectivityResult.ethernet;
+      if(isConnected.value && wfe != null) {
+        wfe.resume();
+      } else if (wfe != null){
+        wfe.pause();
+      }
+      update();
+    });
     super.onInit();
+  }
+
+  void onPause() {
+    if(wfe != null) {
+      wfe.pause();
+    }
   }
 
   void refineLog() {

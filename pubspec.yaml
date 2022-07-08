@@ -20,6 +20,7 @@ dependencies:
   pool: ^1.4.0
   enough_convert: ^1.6.0
   interpolator: ^0.1.0
+  connectivity_plus: ^2.3.5
 
   
  

@@ -29,7 +29,13 @@ class LandlineProvidersResponse {
     this.weResponse,
   });
 
-  List<GScrapperResponse<GStatus>> get responses => [billingResponse, weResponse, etisalatResponse, orangeResponse, vodafoneResponse];
+  List<GScrapperResponse<GStatus>> get responses => [
+        billingResponse,
+        weResponse,
+        etisalatResponse,
+        orangeResponse,
+        vodafoneResponse
+      ];
 
   String get firstID {
     String res;
@@ -38,6 +44,7 @@ class LandlineProvidersResponse {
     }
     return res;
   }
+
   String get firstCountryCode {
     String res;
     for (var ele in responses) {
@@ -45,6 +52,7 @@ class LandlineProvidersResponse {
     }
     return res;
   }
+
   String get firstPhone {
     String res;
     for (var ele in responses) {
@@ -52,10 +60,13 @@ class LandlineProvidersResponse {
     }
     return res;
   }
+
   String get comment {
     String res = "";
     for (var ele in responses) {
-      res += (ele?.comment ?? "").isNotEmpty ? "<${ele.name}> ${ele.comment} </${ele.name}>" : "";
+      res += (ele?.comment ?? "").isNotEmpty
+          ? "<${ele.name}> ${ele.comment} </${ele.name}>"
+          : "";
     }
     return res;
   }
@@ -63,7 +74,7 @@ class LandlineProvidersResponse {
 
 /// this class is responsible for handling all providers
 /// It can handle only one number for all providers, give you the final status of that number
-/// Doesn't do batch scrapping over wide numbers. 
+/// Doesn't do batch scrapping over wide numbers.
 class LandlineProvidersManager {
   // File logFile;
   static final LandlineProvidersManager _instance =
@@ -73,6 +84,15 @@ class LandlineProvidersManager {
   }
   LandlineProvidersManager._internal();
   void Function(String) log;
+
+  bool stopped = false, paused = false;
+  void stop() {
+    stopped = true;
+    paused = false;
+  }
+
+  void pause() => paused = true;
+  void resume() => paused = false;
 
   Future<LandlineProvidersResponse> validateNumber({
     @required String llid,
@@ -94,7 +114,13 @@ class LandlineProvidersManager {
     try {
 // var dir = Directory(Platform.resolvedExecutable).parent.path;
       // logFile = File("$dir/log_${DateFormat("y-M-d H-m").format(DateTime.now())}.txt");
-      List<GScrapperResponse<GStatus>> responsesList = [null, null, null, null, null];
+      List<GScrapperResponse<GStatus>> responsesList = [
+        null,
+        null,
+        null,
+        null,
+        null
+      ];
       final allowList = [
         allowBilling,
         allowWe,
@@ -118,6 +144,13 @@ class LandlineProvidersManager {
         final scrapper = scrappers[i];
         GScrapperResponse<GStatus> currentResponse;
         for (int tryIndex = 0; tryIndex < trials; tryIndex++) {
+          while (paused && !stopped) {
+            writeLog("SCRAPPER:: pausing 2 seconds");
+            await Future.delayed(Duration(seconds: 2));
+          }
+          if (stopped) {
+            throw ("execution has been stopped");
+          }
           log("SCAPPER:: <$llid @($code$phone) scrape $scrapper $tryIndex");
           currentResponse = await scrapper.scrape(llid, code, phone);
           log("SCAPPER:: $llid scrape $scrapper $tryIndex returned with ${currentResponse.status.value}");
@@ -138,16 +171,17 @@ class LandlineProvidersManager {
           await waitAfterError(
               waitAfterErrorMinMillis, waitAfterErrorMaxMillis);
         }
-        providerOrMoreHaveError = providerOrMoreHaveError || currentResponse.status == GStatus.error();
+        providerOrMoreHaveError = providerOrMoreHaveError ||
+            currentResponse.status == GStatus.error();
         reserved = currentResponse.status == GStatus.reserved();
         ownerProvider = scrapper.toString();
         responsesList[i] = currentResponse;
-        if(reserved) break;
+        if (reserved) break;
       }
       var finalStatus = LandlineProvidersStatus.notReserved;
-      if(reserved) {
+      if (reserved) {
         finalStatus = LandlineProvidersStatus.reserved;
-      } else if(providerOrMoreHaveError){ 
+      } else if (providerOrMoreHaveError) {
         finalStatus = LandlineProvidersStatus.error;
       }
       return LandlineProvidersResponse(
@@ -162,6 +196,9 @@ class LandlineProvidersManager {
       );
     } catch (e) {
       log("SCRAPPER:: " + e.toString());
+      if (stopped) {
+        Future.delayed(Duration(seconds: 1), () => stopped = false);
+      }
       return LandlineProvidersResponse(
         LandlineProvidersStatus.error,
         generalResponse: "Error: " + e.toString(),

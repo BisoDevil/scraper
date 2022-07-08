@@ -20,6 +20,7 @@ class WorkflowExector {
   Map<String, dynamic> workflow;
   AppPreferences prefs;
   void Function(String) writeLog;
+  bool stopped = false, paused = false;
   WorkflowExector(
     this.workflow, {
     this.writeLog = print,
@@ -40,6 +41,7 @@ class WorkflowExector {
   Future<void> start() async {
     prefs = await AppPreferences.getInstance();
     final jobs = workflow['jobs'] as List<dynamic>;
+    reset(); // reset after each workflow execution
     globalVars["startJobsTime"] = DateTime.now();
     for (var jobIndex = 0; jobIndex < jobs.length; jobIndex++) {
       progress.value = 0.0;
@@ -69,6 +71,28 @@ class WorkflowExector {
     currentJobIndex.value += 1;
     writeLog(
         "workflow Finished...... (Takes ${DateTime.now().difference(globalVars["startJobsTime"]).toString()})");
+  }
+
+  void pause() {
+    LandlineProvidersManager().pause();
+    paused = true;
+  }
+
+  void resume() {
+    LandlineProvidersManager().resume();
+    paused = false;
+  }
+
+  void stop() {
+    LandlineProvidersManager().stop();
+    stopped = true;
+    paused = false;
+  }
+
+  void reset() {
+    globalVars = {};
+    progress(0.0);
+    current("");
   }
 
   dynamic jobVars(String key, {int jobIndex}) {
@@ -155,6 +179,7 @@ class WorkflowExector {
         for (var item in input.params[id].entries) {
           globalVars["$id.record.${item.key}"] = item.value;
         }
+        _checkStopPauseState();
         final resource = await batchPooler.request();
 
         /// apply filter policy
@@ -194,14 +219,14 @@ class WorkflowExector {
                 "Error in handling validate number response: ${e.toString()}");
             writeLog(
                 "error in handling validate number response. ${e.toString()}");
-            _oneJobcompleter.completeError(e);
+            if (!_oneJobcompleter.isCompleted) _oneJobcompleter.completeError(e);
           });
         }
       }
     } catch (e) {
       print("Error in starting crawling: ${e.toString()}");
       writeLog("error in starting crawling. ${e.toString()}");
-      _oneJobcompleter.completeError(e);
+      if (!_oneJobcompleter.isCompleted) _oneJobcompleter.completeError(e);
     }
 
     return _oneJobcompleter.future;
@@ -210,9 +235,9 @@ class WorkflowExector {
   next(LandlineProvidersResponse response, input, line, resource, i, id,
       providers, billingCSVPath, generalCSVPath,
       {shouldWrite = true, shouldLog = true}) {
-    print("AMMAR:: resource hash code ${resource.hashCode}");
     resource.release();
     unsetRecord(id); // release memory
+    _checkStopPauseState();
     progress(i / input.numbers.length);
     current("$i/${input.numbers.length}");
     response = rebuildLandlineResponse(response, input, id);
@@ -229,8 +254,7 @@ class WorkflowExector {
         shouldContinue: true,
       );
     }
-    if (shouldWrite &&
-        generalCSVPath != null) {
+    if (shouldWrite && generalCSVPath != null) {
       // write responses of providers
       Writer().writeGeneralExcelSheet([response],
           path: generalCSVPath, shouldContinue: true);
@@ -375,5 +399,15 @@ class WorkflowExector {
     final _data = comment.split("<$name>");
     if (_data.length <= 1) return "";
     return _data[1].split("</$name>")[0];
+  }
+
+  Future<void> _checkStopPauseState() async {
+    while (paused && !stopped) {
+      writeLog(("WORKFLOW:: pausing 2 seconds"));
+      await Future.delayed(Duration(seconds: 2));
+    }
+    if (stopped) {
+      throw ("execution has been stopped");
+    }
   }
 }
