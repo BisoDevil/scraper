@@ -224,6 +224,7 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
         r1.content().contains("اسم المستخدم او كلمة السر خطأ")) {
       RunLogger().newLine(">00 update etisalat cookie says: wrong credentials");
       etisalatCookie = "";
+      throw("403 اسم المستخدم او كلمة السر خطأ");
     } else {
       etisalatCookie = r1.headers[HttpHeaders.setCookieHeader];
     }

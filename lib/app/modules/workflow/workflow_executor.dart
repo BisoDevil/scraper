@@ -62,7 +62,7 @@ class WorkflowExector {
       writeLog("WORKFLOW:: starting job $jobIndex (${currentJob['name']})");
       // for each job:
       // we init the job options
-      initJobOptions(currentJob['options']);
+      await initJobOptions(currentJob['options'], currentJob['providers']);
       // execute the job
       _oneJobcompleter = Completer();
       await doJob(jobIndex, currentJob);
@@ -109,30 +109,30 @@ class WorkflowExector {
     globalVars.removeWhere((key, value) => key.startsWith(id + ".record"));
   }
 
-  void initJobOptions(Map<String, dynamic> options) {
+  Future<void> initJobOptions(Map<String, dynamic> options, List providers) async {
     options = options ?? {};
     // etisalat
     final eusername = options['etisalatUsername'] ?? prefs.etisalatUsername;
     final epass = options['etisalatPassword'] ?? prefs.etisalatPassword;
-    if (eusername != null && epass != null) {
-      EtisalatScrapper().init(eusername, epass);
+    if (eusername != null && epass != null && providers.contains('etisalat')) {
+      await EtisalatScrapper().init(eusername, epass);
     }
     // vodafone
     final vusername = options['vodafoneUsername'] ?? prefs.vodafoneUsername;
     final vpass = options['vodafonePassword'] ?? prefs.vodafonePassword;
     final vsid = options['vodafoneSID'] ?? prefs.vodafoneSID;
-    if (vusername != null && vpass != null && vsid != null) {
-      VodafoneScrapper().init(vusername, vpass, vsid);
+    if (vusername != null && vpass != null && vsid != null && providers.contains('vodafone')) {
+      await VodafoneScrapper().init(vusername, vpass, vsid);
     }
     // billing
     final bgracePeriod = options['gracePeriodDays'] ?? prefs.gracePeriodDays;
-    if (bgracePeriod != null) {
+    if (bgracePeriod != null && providers.contains('billing')) {
       BillingScrapper().init(gracePeriodDays: bgracePeriod);
     }
     // orange
     final orangeConfidence =
         options['orangeConfidence'] ?? prefs.orangeConfidence;
-    if (orangeConfidence != null) {
+    if (orangeConfidence != null && providers.contains('orange')) {
       OrangeScrapper().init(confidenceTrials: orangeConfidence);
     }
     // init option variables
