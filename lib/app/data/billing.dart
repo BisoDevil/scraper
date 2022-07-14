@@ -146,13 +146,14 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         RunLogger().newLine(
             ">$currentId #billing we returned unexcepeted error occurred");
         return BillingResponse(
-            id: currentId,
-            countryCode: code,
-            landline: phone,
-            newLandlineNumber: phone,
-            status: BillingStatus.pin(),
-            errorMessage: "error: An unexcepeted error occurred",
-            comment: "call 111");
+          id: currentId,
+          countryCode: code,
+          landline: phone,
+          newLandlineNumber: phone,
+          status: BillingStatus.pin(),
+          errorMessage: "error: An unexcepeted error occurred",
+          comment: "call 111"
+        );
       }
 
       final resJson = res.json();
@@ -254,23 +255,12 @@ class BillingScrapper extends GScrapper<BillingResponse> {
       return;
     }
     RunLogger().newLine(">$llid we token is empty, update token");
-    final reqRes = await requests.Requests.post(
-      "https://billing.te.eg/api/Account/Inquiry",
-      headers: {
-        // "Cookie": (weToken?.isEmpty ?? true) ? null : weToken,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
-      },
-      body: {
-        "AreaCode": "02",
-        "PhoneNumber": "37711972",
-        "InquiryBy": "telephone",
-      },
-      verify: false,
-      persistCookies: true,
+    var res = await requests.Requests.get(
+      "https://api-my.te.eg/api/user/generatetoken?channelId=WEB_APP",
       timeoutSeconds: defaultTimeOutSeconds,
     );
-    weToken = reqRes.headers['set-cookie'].split("token=")[1].split(";")[0];
-    RunLogger().newLine(">$llid new we cookie is generated = $weToken");
+    weToken = res.json()["body"]["jwt"];
+    RunLogger().newLine(">$llid new we token is generated = $weToken");
   }
 
   Future<requests.Response> _request(String code, String phone) async {
@@ -278,7 +268,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
       "https://billing.te.eg/api/Account/Inquiry",
       headers: {
         "token": weToken,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
       },
       body: {
         "AreaCode": code.trim(),
@@ -295,7 +285,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
       "https://billing.te.eg/api/Account/GetChangedNo",
       headers: {
         "token": weToken,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
       },
       body: {
         "AreaCode": code.trim(),
