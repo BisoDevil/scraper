@@ -153,6 +153,7 @@ class LandlineProvidersManager {
           }
           log("SCAPPER:: <$llid @($code$phone) scrape $scrapper $tryIndex");
           currentResponse = await scrapper.scrape(llid, code, phone);
+          await scrapper.waitPreferedTime();
           log("SCAPPER:: $llid scrape $scrapper $tryIndex returned with ${currentResponse.status.value}");
           if (currentResponse.status == BillingStatus.wrongNumber() ||
               currentResponse.status == BillingStatus.billMoreGracePeriod() ||

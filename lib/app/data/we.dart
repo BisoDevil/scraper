@@ -8,7 +8,7 @@ import 'package:scraper/io/logger.dart';
 
 class WeStatus extends GStatus {
   WeStatus(String s) : super(s);
-  WeStatus.of(GStatus s): this(s.value);
+  WeStatus.of(GStatus s) : this(s.value);
 }
 
 class WeResponse extends GScrapperResponse<WeStatus> {
@@ -64,12 +64,12 @@ class WeScrapper extends GScrapper<WeResponse> {
   ) async {
     var resContent = "";
     try {
-      await _updateToken(code, phone);
+      await _updateToken(currentId, code, phone);
       var res = await _request(code, phone);
       resContent = res.bodyString;
       final body = res.body;
-      if(res.hasError) {
-        throw("unexpected response, status code ${res.statusCode}, statusText ${res.statusText}");
+      if (res.hasError) {
+        throw ("unexpected response, status code ${res.statusCode}, statusText ${res.statusText}");
       }
       if (body["body"] == null) {
         String msg = body["header"]["responseMessage"];
@@ -79,7 +79,7 @@ class WeScrapper extends GScrapper<WeResponse> {
             id: currentId,
             countryCode: code,
             landline: phone,
-            comment: msg
+            comment: msg,
           );
         } else {
           return WeResponse(
@@ -87,7 +87,7 @@ class WeScrapper extends GScrapper<WeResponse> {
             id: currentId,
             countryCode: code,
             landline: phone,
-            errorMessage: msg, 
+            errorMessage: msg,
           );
         }
       } else {
@@ -100,7 +100,8 @@ class WeScrapper extends GScrapper<WeResponse> {
         );
       }
     } catch (e, s) {
-      RunLogger().newLine(">$currentId #we error: $e while resContent=$resContent with stacktrace $s");
+      RunLogger().newLine(
+          ">$currentId #we error: $e while resContent=$resContent with stacktrace $s");
       return WeResponse(
         status: WeStatus.of(GStatus.error()),
         id: currentId,
@@ -125,7 +126,7 @@ class WeScrapper extends GScrapper<WeResponse> {
     );
   }
 
-  Future<void> _updateToken(String code, String phone) async {
+  Future<void> _updateToken(String llid, String code, String phone) async {
     if (weToken.isNotEmpty) {
       return;
     }
@@ -137,5 +138,10 @@ class WeScrapper extends GScrapper<WeResponse> {
   @override
   String toString() {
     return "We";
+  }
+
+  @override
+  Future<void> waitPreferedTime() {
+    return Future.delayed(Duration(milliseconds: 0));
   }
 }

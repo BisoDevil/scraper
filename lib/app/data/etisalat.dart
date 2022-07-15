@@ -231,6 +231,11 @@ class EtisalatScrapper extends GScrapper<EtisalatResponse> {
   }
 
   @override
+  Future<void> waitPreferedTime() {
+    return Future.delayed(Duration(milliseconds: 0));
+  }
+  
+  @override
   String toString() {
     return "Etislat";
   }

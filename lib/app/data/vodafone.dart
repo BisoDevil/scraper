@@ -114,7 +114,7 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
       } else {
         print(msg);
         final isErrorMesg = msg.contains("لم تنجح العملية");
-        if(!isErrorMesg) {
+        if (!isErrorMesg) {
           return VodafoneResponse(
             // status: isErrorMesg ? GStatus.error() : GStatus.reserved(),
             status: VodafoneStatus.of(GStatus.reserved()),
@@ -263,6 +263,11 @@ class VodafoneScrapper extends GScrapper<VodafoneResponse> {
       }
     }
     return t;
+  }
+
+  @override
+  Future<void> waitPreferedTime() {
+    return Future.delayed(Duration(milliseconds: 0));
   }
 
   @override

@@ -332,4 +332,9 @@ class BillingScrapper extends GScrapper<BillingResponse> {
   String toString() {
     return "Billing";
   }
+
+  @override
+  Future<void> waitPreferedTime() {
+    return Future.delayed(Duration(milliseconds: 300));
+  }
 }

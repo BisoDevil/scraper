@@ -53,4 +53,5 @@ abstract class GScrapperResponse<ScrapperStatus extends GStatus> {
 
 abstract class GScrapper<ScrapperResponse extends GScrapperResponse> {
   Future<ScrapperResponse> scrape(String landlineID, String code, String phone);
+  Future<void> waitPreferedTime();
 }
