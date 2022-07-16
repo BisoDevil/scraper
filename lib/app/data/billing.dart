@@ -78,7 +78,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
   }
   BillingScrapper._internal();
 
-  String weToken = "";
+  String weToken = "0000000000000000000000000000000000000000";
   int id = 1;
 
   int gracePeriodDays = 55;
@@ -238,7 +238,6 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         );
       }
     } catch (e, s) {
-      weToken = "";
       print(e.toString());
       RunLogger().newLine(
           ">$currentId #billing error: $e while the resContent was $resContent. stacktrace $s");
@@ -277,7 +276,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
     return http.post(
       "https://billing.te.eg/api/Account/Inquiry",
       headers: {
-        "Token": "0000000000000000000000000000000000000000",
+        "token": weToken,
       },
       body: {
         "AreaCode": code.trim(),
@@ -292,7 +291,6 @@ class BillingScrapper extends GScrapper<BillingResponse> {
       "https://billing.te.eg/api/Account/GetChangedNo",
       headers: {
         "token": weToken,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
       },
       body: {
         "AreaCode": code.trim(),
