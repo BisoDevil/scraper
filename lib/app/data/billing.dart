@@ -1,5 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
-import 'package:requests/requests.dart' as requests;
+import 'package:http/http.dart' as http;
 import 'package:scraper/app/data/common.dart';
 import 'package:scraper/io/logger.dart';
 
@@ -76,7 +78,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
   }
   BillingScrapper._internal();
 
-  String weToken = "";
+  String weToken = "0000000000000000000000000000000000000000";
   int id = 1;
 
   int gracePeriodDays = 55;
@@ -98,10 +100,11 @@ class BillingScrapper extends GScrapper<BillingResponse> {
   ) async {
     var resContent = "";
     try {
-      await _updateToken(currentId, code, phone);
+      // await _updateToken(currentId, code, phone);
       var res = await _request(code, phone);
+      // raiseForNotCorrectStatus(res);
       String newLandline = "";
-      resContent = res.content();
+      resContent = res.body;
 
       // first we should check for new landline number
       if (resContent.contains('telephone does not exist')) {
@@ -127,7 +130,8 @@ class BillingScrapper extends GScrapper<BillingResponse> {
           RunLogger().newLine(
               ">$currentId number changed, request again with this number");
           res = await _request(code, newLandline);
-          resContent = res.content();
+          // raiseForNotCorrectStatus(res);
+          resContent = res.body;
         } while (resContent.contains('telephone does not exist'));
       }
 
@@ -156,7 +160,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         );
       }
 
-      final resJson = res.json();
+      final resJson = jsonDecode(resContent);
       if (resJson["Account"] == null) {
         return BillingResponse(
             countryCode: code,
@@ -235,7 +239,6 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         );
       }
     } catch (e, s) {
-      weToken = "";
       print(e.toString());
       RunLogger().newLine(
           ">$currentId #billing error: $e while the resContent was $resContent. stacktrace $s");
@@ -255,51 +258,53 @@ class BillingScrapper extends GScrapper<BillingResponse> {
       return;
     }
     RunLogger().newLine(">$llid we token is empty, update token");
-    var res = await requests.Requests.get(
-      "https://api-my.te.eg/api/user/generatetoken?channelId=WEB_APP",
-      timeoutSeconds: defaultTimeOutSeconds,
+    final reqRes = await http.post(
+      "https://billing.te.eg/api/Account/Inquiry",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+      },
+      body: {
+        "AreaCode": "02",
+        "PhoneNumber": "37711972",
+        "InquiryBy": "telephone",
+      },
     );
     weToken = res.json()["body"]["jwt"];
     RunLogger().newLine(">$llid new we token is generated = $weToken");
   }
 
-  Future<requests.Response> _request(String code, String phone) async {
-    return requests.Requests.post(
+  Future<http.Response> _request(String code, String phone) async {
+    return http.post(
       "https://billing.te.eg/api/Account/Inquiry",
       headers: {
         "token": weToken,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
       },
       body: {
         "AreaCode": code.trim(),
         "PhoneNumber": phone.trim(),
         "InquiryBy": "telephone",
       },
-      verify: false,
-      timeoutSeconds: defaultTimeOutSeconds,
     );
   }
 
   Future<String> checkChangedLanline(String code, String phone) async {
-    final res = await requests.Requests.post(
+    final res = await http.post(
       "https://billing.te.eg/api/Account/GetChangedNo",
       headers: {
         "token": weToken,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
       },
       body: {
         "AreaCode": code.trim(),
         "PhoneNumber": phone.trim(),
         // "InquiryBy": "telephone",
       },
-      verify: false,
-      timeoutSeconds: defaultTimeOutSeconds,
     );
     if (res.headers.containsKey("inquirystatus") &&
         res.headers["inquirystatus"] == "RequirePinCode") {
       return "pin";
     }
-    final content = res.content();
+    // raiseForNotCorrectStatus(res);
+    final content = res.body;
     if (content.contains("has not changed")) {
       return null;
     }
@@ -321,5 +326,16 @@ class BillingScrapper extends GScrapper<BillingResponse> {
   @override
   String toString() {
     return "Billing";
+  }
+
+  @override
+  Future<void> waitPreferedTime() {
+    return Future.delayed(Duration(milliseconds: 0));
+  }
+
+  void raiseForNotCorrectStatus(http.Response response) {
+    if(response.statusCode >= 400) {
+      throw Exception("response is not success (${response.statusCode}). body is: ${response.body}");
+    }
   }
 }
