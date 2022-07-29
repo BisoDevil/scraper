@@ -150,13 +150,14 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         RunLogger().newLine(
             ">$currentId #billing we returned unexcepeted error occurred");
         return BillingResponse(
-            id: currentId,
-            countryCode: code,
-            landline: phone,
-            newLandlineNumber: phone,
-            status: BillingStatus.pin(),
-            errorMessage: "error: An unexcepeted error occurred",
-            comment: "call 111");
+          id: currentId,
+          countryCode: code,
+          landline: phone,
+          newLandlineNumber: phone,
+          status: BillingStatus.pin(),
+          errorMessage: "error: An unexcepeted error occurred",
+          comment: "call 111"
+        );
       }
 
       final resJson = jsonDecode(resContent);
@@ -268,8 +269,8 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         "InquiryBy": "telephone",
       },
     );
-    weToken = reqRes.headers['set-cookie'].split("token=")[1].split(";")[0];
-    RunLogger().newLine(">$llid new we cookie is generated = $weToken");
+    weToken = res.json()["body"]["jwt"];
+    RunLogger().newLine(">$llid new we token is generated = $weToken");
   }
 
   Future<http.Response> _request(String code, String phone) async {
