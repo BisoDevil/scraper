@@ -7,7 +7,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
 
 import 'package:scraper/app/data/scrapper.dart';
+import 'package:scraper/app/modules/auth/controllers/auth_service.dart';
 import 'package:scraper/app/modules/workflow/workflow_executor.dart';
+import 'package:scraper/app/routes/app_pages.dart';
 import 'package:scraper/io/logger.dart';
 import 'package:scraper/utils/preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -18,6 +20,7 @@ enum InputType { numbers, billing, general, raw }
 
 class HomeController extends GetxController {
   AppPreferences prefs;
+  User currentUser = AuthService.getInstance().currentUser;
   var singleLandline = "".obs;
   var log = "Logs of last run:".obs;
   String input;
@@ -31,6 +34,7 @@ class HomeController extends GetxController {
       allowEtisalat = false,
       allowArdy = false;
   final isRunning = false.obs;
+  StreamSubscription<ConnectivityResult> connectivitySubscription;
 
   List<LandlineProvidersResponse> responses = [];
   DateTime startTime;
@@ -121,12 +125,13 @@ class HomeController extends GetxController {
   @override
   void onInit() async {
     prefs = await AppPreferences.getInstance();
-    Connectivity().onConnectivityChanged.listen((connectivity) {
+    currentUser = AuthService.getInstance().currentUser;
+    connectivitySubscription = Connectivity().onConnectivityChanged.listen((connectivity) {
       isConnected.value = connectivity == ConnectivityResult.wifi ||
           connectivity == ConnectivityResult.ethernet;
-      if(isConnected.value && wfe != null) {
+      if (isConnected.value && wfe != null) {
         wfe.resume();
-      } else if (wfe != null){
+      } else if (wfe != null) {
         wfe.pause();
       }
       update();
@@ -134,8 +139,16 @@ class HomeController extends GetxController {
     super.onInit();
   }
 
+  @override
+  void onClose() {
+    if (connectivitySubscription != null) {
+      connectivitySubscription.cancel();
+    }
+    super.onClose();
+  }
+
   void onPause() {
-    if(wfe != null) {
+    if (wfe != null) {
       wfe.pause();
     }
   }
@@ -156,5 +169,10 @@ class HomeController extends GetxController {
     input = singleLandline.value;
     inputType(InputType.raw);
     startWeb();
+  }
+
+  void logout() async {
+    await AuthService.getInstance().logout();
+    Get.offNamed(Routes.AUTH);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:scraper/app/modules/home/controllers/home_controller.dart';
+import 'package:scraper/app/modules/workflow/controllers/workflow_controller.dart';
 
 import 'app/routes/app_pages.dart';
 
@@ -17,7 +18,8 @@ Future<void> main() async {
     GetMaterialApp(
       debugShowCheckedModeBanner: false,
       onInit: () {
-        Get.lazyPut(() => HomeController(), fenix: true);
+        // Get.lazyPut(() => HomeController(), fenix: true);
+        // Get.lazyPut(() => WorkflowController(), fenix: true);
       },
       initialRoute: AppPages.INITIAL,
       defaultTransition: Transition.cupertino,

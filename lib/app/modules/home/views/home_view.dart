@@ -14,20 +14,30 @@ class HomeView extends GetView<HomeController> {
         title: Text('Landline Scrapper by innovationcodes'),
         centerTitle: false,
         actions: [
-          IconButton(
-            onPressed: () {
-              Get.toNamed(Routes.SETTINGS);
-            },
-            icon: Icon(
-              Icons.settings,
+          if (controller.currentUser.haveScope("settings"))
+            IconButton(
+              onPressed: () {
+                Get.toNamed(Routes.SETTINGS);
+              },
+              icon: Icon(
+                Icons.settings,
+              ),
             ),
-          ),
+          if (controller.currentUser.haveScope("workflow"))
+            IconButton(
+              onPressed: () {
+                Get.toNamed(Routes.WORKFLOW);
+              },
+              icon: Icon(
+                Icons.workspaces,
+              ),
+            ),
           IconButton(
             onPressed: () {
-              Get.toNamed(Routes.WORKFLOW);
+              controller.logout();
             },
             icon: Icon(
-              Icons.workspaces,
+              Icons.exit_to_app,
             ),
           ),
         ],
@@ -140,66 +150,73 @@ class HomeView extends GetView<HomeController> {
                                     );
                                   },
                                 ),
-                                GetBuilder<HomeController>(
-                                  builder: (_) {
-                                    return CheckboxListTile(
-                                      value: controller.allowArdy,
-                                      title: Text("Billing"),
-                                      onChanged: (value) {
-                                        controller.allowArdy = value;
-                                        controller.update();
-                                      },
-                                    );
-                                  },
-                                ),
-                                GetBuilder<HomeController>(
-                                  builder: (_) {
-                                    return CheckboxListTile(
-                                      value: controller.allowWe,
-                                      title: Text("We"),
-                                      onChanged: (value) {
-                                        controller.allowWe = value;
-                                        controller.update();
-                                      },
-                                    );
-                                  },
-                                ),
-                                GetBuilder<HomeController>(
-                                  builder: (_) {
-                                    return CheckboxListTile(
-                                      value: controller.allowEtisalat,
-                                      title: Text("Etisalat"),
-                                      onChanged: (value) {
-                                        controller.allowEtisalat = value;
-                                        controller.update();
-                                      },
-                                    );
-                                  },
-                                ),
-                                GetBuilder<HomeController>(
-                                  builder: (_) {
-                                    return CheckboxListTile(
-                                      value: controller.allowOrange,
-                                      title: Text("Orange"),
-                                      onChanged: (value) {
-                                        controller.allowOrange = value;
-                                        controller.update();
-                                      },
-                                    );
-                                  },
-                                ),
-                                GetBuilder<HomeController>(
-                                  builder: (_) {
-                                    return CheckboxListTile(
-                                      value: controller.allowVodafone,
-                                      title: Text("Vodafone"),
-                                      onChanged: (value) {
-                                        controller.allowVodafone = value;
-                                        controller.update();
-                                      },
-                                    );
-                                  },
-                                ),
+                                if (controller.currentUser.haveScope("billing"))
+                                  GetBuilder<HomeController>(
+                                    builder: (_) {
+                                      return CheckboxListTile(
+                                        value: controller.allowArdy,
+                                        title: Text("Billing"),
+                                        onChanged: (value) {
+                                          controller.allowArdy = value;
+                                          controller.update();
+                                        },
+                                      );
+                                    },
+                                  ),
+                                if (controller.currentUser.haveScope("we"))
+                                  GetBuilder<HomeController>(
+                                    builder: (_) {
+                                      return CheckboxListTile(
+                                        value: controller.allowWe,
+                                        title: Text("We"),
+                                        onChanged: (value) {
+                                          controller.allowWe = value;
+                                          controller.update();
+                                        },
+                                      );
+                                    },
+                                  ),
+                                if (controller.currentUser
+                                    .haveScope("etisalat"))
+                                  GetBuilder<HomeController>(
+                                    builder: (_) {
+                                      return CheckboxListTile(
+                                        value: controller.allowEtisalat,
+                                        title: Text("Etisalat"),
+                                        onChanged: (value) {
+                                          controller.allowEtisalat = value;
+                                          controller.update();
+                                        },
+                                      );
+                                    },
+                                  ),
+                                if (controller.currentUser.haveScope("orange"))
+                                  GetBuilder<HomeController>(
+                                    builder: (_) {
+                                      return CheckboxListTile(
+                                        value: controller.allowOrange,
+                                        title: Text("Orange"),
+                                        onChanged: (value) {
+                                          controller.allowOrange = value;
+                                          controller.update();
+                                        },
+                                      );
+                                    },
+                                  ),
+                                if (controller.currentUser
+                                    .haveScope("vodafone"))
+                                  GetBuilder<HomeController>(
+                                    builder: (_) {
+                                      return CheckboxListTile(
+                                        value: controller.allowVodafone,
+                                        title: Text("Vodafone"),
+                                        onChanged: (value) {
+                                          controller.allowVodafone = value;
+                                          controller.update();
+                                        },
+                                      );
+                                    },
+                                  ),
                               ],
                             ),
                           )
