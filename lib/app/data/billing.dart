@@ -269,7 +269,7 @@ class BillingScrapper extends GScrapper<BillingResponse> {
         "InquiryBy": "telephone",
       },
     );
-    weToken = res.json()["body"]["jwt"];
+    weToken = jsonDecode(reqRes.body)["body"]["jwt"];
     RunLogger().newLine(">$llid new we token is generated = $weToken");
   }
 
